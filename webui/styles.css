@@ -650,25 +650,24 @@ md-menu-item label {
     color: var(--md-sys-color-on-secondary-container);
 }
 
-.bottom-bar-item md-icon {
+.bottom-bar-item > .kp-icon {
     position: relative;
     z-index: 1;
     height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    width: 24px;
+    display: block;
 }
 
-.bottom-bar-item md-icon[slot="selected"] {
+.bottom-bar-item > .kp-icon[slot="selected"] {
     display: none;
 }
 
-.bottom-bar-item[selected] md-icon:not([slot="selected"]) {
+.bottom-bar-item[selected] > .kp-icon:not([slot="selected"]) {
     display: none;
 }
 
-.bottom-bar-item[selected] md-icon[slot="selected"] {
-    display: flex;
+.bottom-bar-item[selected] > .kp-icon[slot="selected"] {
+    display: block;
 }
 
 .bottom-bar-item-text {
@@ -700,7 +699,7 @@ md-dialog .checkbox-item {
 }
 
 .text-field-dialog {
-    margin-top: 20vh;
+    margin: auto !important;
 }
 
 #language-form {
@@ -728,4 +727,19 @@ md-dialog .checkbox-item {
 
 .fab-padding {
     padding-bottom: 72px;
+}
+
+/* Portable SVG icons. Fixed viewBox + explicit dimensions; never require
+ * Material Symbols, PUA Unicode characters, platform emoji or icon fonts. */
+.kp-icon {
+    display: block;
+    width: 24px;
+    height: 24px;
+    min-width: 24px;
+    flex-shrink: 0;
+    fill: currentColor;
+    vertical-align: middle;
+}
+.kp-icon[slot="trailing-icon"] {
+    cursor: pointer;
 }

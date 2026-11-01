@@ -7,6 +7,12 @@ on:
     paths-ignore:
       - '**.md'
   workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'webui/**'
+      - 'module/module.prop'
+      - '.github/workflows/build.yaml'
 
 env:
   MODULE_NAME: 'KPatch-Next-Module'
@@ -90,6 +96,16 @@ jobs:
         node-version: '20.19.x'
         cache: 'pnpm'
         cache-dependency-path: webui/pnpm-lock.yaml
+
+    - name: Portable SVG verification
+      shell: bash
+      run: |
+        set -euo pipefail
+        node --check webui/icons.js
+        node --check webui/page/kpm.js
+        node --check webui/page/patch.js
+        node --check webui/index.js
+        node webui/tests/check-icons.mjs
 
     - name: build webroot
       run: |
