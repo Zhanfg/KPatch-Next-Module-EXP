@@ -220,13 +220,15 @@
                 <div class="bottom-bar-item-text" data-i18n="title_home">Home</div>
             </div>
             <div class="bottom-bar-item installed-only" id="KPM">
-                <md-icon><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 10h-1V7a2 2 0 0 0-2-2h-4V4a2 2 0 1 0-4 0v1H4a2 2 0 0 0-2 2v3h1a2 2 0 1 1 0 4H2v4a2 2 0 0 0 2 2h4v-1a2 2 0 0 1 4 0v1h4a2 2 0 0 0 2-2v-4h1a2 2 0 1 0 0-4Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></md-icon>
-                <md-icon slot="selected"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 10h-1V7a2 2 0 0 0-2-2h-4V4a2 2 0 1 0-4 0v1H4a2 2 0 0 0-2 2v3h1a2 2 0 1 1 0 4H2v4a2 2 0 0 0 2-2v-4h1a2 2 0 1 0 0-4Z"/></svg></md-icon>
+                <!-- Symmetric viewBox and matching outlined/filled states; fixed-size by CSS. -->
+                <md-icon><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 10h-1V7a2 2 0 0 0-2-2h-3V4a2 2 0 0 0-4 0v1H6a2 2 0 0 0-2 2v3h1a2 2 0 0 1 0 4H4v3a2 2 0 0 0 2 2h3v1a2 2 0 0 0 4 0v-1h3a2 2 0 0 0 2-2v-3h1a2 2 0 0 0 0-4Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></md-icon>
+                <md-icon slot="selected"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 10h-1V7a2 2 0 0 0-2-2h-3V4a2 2 0 0 0-4 0v1H6a2 2 0 0 0-2 2v3h1a2 2 0 0 1 0 4H4v3a2 2 0 0 0 2 2h3v1a2 2 0 0 0 4 0v-1h3a2 2 0 0 0 2-2v-3h1a2 2 0 0 0 0-4Z" fill="currentColor"/></svg></md-icon>
                 <div class="bottom-bar-item-text" data-i18n="title_kpmodule">KPModule</div>
             </div>
             <div class="bottom-bar-item installed-only" id="exclude">
-                <md-icon><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="m5.65 5.65 12.7 12.7" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg></md-icon>
-                <md-icon slot="selected"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="currentColor"/><path d="m5.65 5.65 12.7 12.7" fill="none" stroke="var(--md-sys-color-secondary-container, #fff)" stroke-width="2.6" stroke-linecap="round"/></svg></md-icon>
+                <!-- The prohibited icon must never invert to a filled disc. -->
+                <md-icon><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="m5.65 5.65 12.7 12.7" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg></md-icon>
+                <md-icon slot="selected"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2.3"/><path d="m5.65 5.65 12.7 12.7" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"/></svg></md-icon>
                 <div class="bottom-bar-item-text" data-i18n="title_exclude">Exclude</div>
             </div>
             <div class="bottom-bar-item" id="settings">
