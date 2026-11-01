@@ -25,21 +25,21 @@ jobs:
         run: |
           set -euo pipefail
           test "$(git hash-object webui/index.js)" = "ed8e86de564c2b978a75ee2b3bde3d24d35898f2"
-          test "$(git hash-object webui/page/kpm.js)" = "ea8cf0d7c031524717379babedb76aeb2bf01427"
+          grep -Fq 'function getAbiBadge(module)' webui/page/kpm.js
           test "$(git hash-object webui/page/patch.js)" = "1dc469accec499f294374600f92f55ba55796064"
           test "$(git hash-object webui/route.js)" = "31179747cc1214aa8671b28b12cc51ee559f9030"
           sh -n module/customize.sh
           ! grep -Fq 'Hot update webui' module/customize.sh
           grep -Fq "margin: auto !important" webui/styles.css
           grep -Fq "md-outlined-text-field:focus-within" webui/styles.css
-          grep -Fq "versionCode=20" module/module.prop
-          echo "Upstream UI logic unchanged; only UI CSS/SVG changed."
+          grep -Fq "versionCode=21" module/module.prop
+          echo "Navigation and original actions preserved; M3 card and ABI badge updated."
 
       - name: Checkout pinned ABI-fixed EXP core
         uses: actions/checkout@v4
         with:
           repository: Zhanfg/KPatch-Next-EXP
-          ref: 8193f610d0105569437e17cc991459365dfa463a
+          ref: e8286dea5e4e78e25f4a57178635d3b0ae00d577
           path: core
           submodules: recursive
 
@@ -47,7 +47,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git -C core rev-parse HEAD)" = "8193f610d0105569437e17cc991459365dfa463a"
+          test "$(git -C core rev-parse HEAD)" = "e8286dea5e4e78e25f4a57178635d3b0ae00d577"
           python3 core/checks/check_kpm_data_hygiene.py
           cc -std=c11 -O2 -Wall -Wextra -Werror \
             -o /tmp/test_kpm_secure_wipe core/checks/test_kpm_secure_wipe.c
@@ -99,6 +99,11 @@ jobs:
           done
           install -m 0755 core/tools/build/android/kptools module/bin/kptools
           install -m 0755 core/user/build/android/kpatch module/bin/kpatch
+          # Host-side check: ABI 1 is parsed from a real KPM, not hardcoded in WebUI.
+          make -C core/kpms/demo-hello
+          cmake -S core/tools -B /tmp/kptools-abi-host -DCMAKE_BUILD_TYPE=Release
+          cmake --build /tmp/kptools-abi-host --parallel 2
+          /tmp/kptools-abi-host/kptools -l -M core/kpms/demo-hello/hello.kpm | grep -Fxq 'abi=1'
           sha256sum module/bin/kpimg module/bin/kptools module/bin/kpatch
 
       - name: Get Magiskboot v30.6
@@ -131,7 +136,9 @@ jobs:
           node --check webui/page/patch.js
           node --check webui/route.js
           node --check webui/tests/nav-consistency.test.mjs
+          node --check webui/tests/kpm-card-abi.test.mjs
           node webui/tests/nav-consistency.test.mjs
+          node webui/tests/kpm-card-abi.test.mjs
           cd webui
           pnpm install --frozen-lockfile
           pnpm build
@@ -148,7 +155,7 @@ jobs:
           test -s module/bin/kptools
           test -s module/bin/magiskboot
           test -s module/webroot/index.html
-          grep -Fq 'versionCode=20' module/module.prop
+          grep -Fq 'versionCode=21' module/module.prop
           (cd module && zip -q -r ../KPatch-Next-EXP-CleanUI-Nohello-r1-hotfix2-security.zip .)
           unzip -t KPatch-Next-EXP-CleanUI-Nohello-r1-hotfix2-security.zip | tail -1
           sha256sum KPatch-Next-EXP-CleanUI-Nohello-r1-hotfix2-security.zip
