@@ -42,6 +42,31 @@ jobs:
         mv module/bin/kptools-android module/bin/kptools
         mv module/bin/kpimg-linux module/bin/kpimg
 
+    - name: Checkout ABI-fixed EXP core
+      uses: actions/checkout@v4
+      with:
+        repository: Zhanfg/KPatch-Next-EXP
+        ref: main
+        path: core
+        submodules: recursive
+
+    - name: Build patched KPIMG from this fork (never use the upstream KPIMG)
+      shell: bash
+      run: |
+        set -euo pipefail
+        curl -fL --retry 3 -o /tmp/arm-toolchain.tar.xz \
+          https://armkeil.blob.core.windows.net/developer/Files/downloads/gnu/12.2.rel1/binrel/arm-gnu-toolchain-12.2.rel1-x86_64-aarch64-none-elf.tar.xz
+        mkdir -p /tmp/kp-toolchain
+        tar -xJf /tmp/arm-toolchain.tar.xz -C /tmp/kp-toolchain --strip-components=1
+        export TARGET_COMPILE=/tmp/kp-toolchain/bin/aarch64-none-elf-
+        make -C core/kernel
+        test -s core/kernel/kpimg
+        "${TARGET_COMPILE}nm" -a core/kernel/kpimg.elf | grep -F '__kp_symbol_is_su_allow_uid'
+        cp core/kernel/kpimg module/bin/kpimg
+        printf 'Patched EXP core SHA: %s\n' "$(git -C core rev-parse HEAD)" > module/ABI-COMPAT-BUILD.txt
+        printf 'Android utilities: EXP release 0.13.14; kernel: compiled from Zhanfg/KPatch-Next-EXP main\n' >> module/ABI-COMPAT-BUILD.txt
+        sha256sum module/bin/kpimg
+
     - name: Download magiskboot binary
       run: |
         TAG="${{ env.magiskboot }}"
