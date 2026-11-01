@@ -1,211 +1,149 @@
-name: Build
+name: Clean v0.0.9 UI + Nohello ABI build
 
 on:
   push:
     branches:
       - main
-    paths-ignore:
-      - '**.md'
-  workflow_dispatch:
+      - rebuild/v0.0.9-ui-nohello-minimal
   pull_request:
-    branches: [main]
-    paths:
-      - 'webui/**'
-      - 'module/**'
-      - '.github/workflows/build.yaml'
+    branches:
+      - main
+  workflow_dispatch:
 
-env:
-  MODULE_NAME: 'KPatch-Next-Module'
-  GH_TOKEN: ${{ github.token }}
+permissions:
+  contents: read
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.check_tag.outputs.version }}
-      check_tag: ${{ steps.check_tag.outputs.need_release }}
     steps:
-    - name: Checkout
-      uses: actions/checkout@v6
-      with:
-        fetch-depth: 1
+      - name: Checkout module based on upstream v0.0.9
+        uses: actions/checkout@v4
 
-    - name: Load versions from version.properties
-      run: |
-        grep -v '^#' version.properties | sed -e 's/ *= */=/g' -e 's/"//g' >> $GITHUB_ENV
+      - name: Verify unmodified upstream runtime logic
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git hash-object webui/index.js)" = "ed8e86de564c2b978a75ee2b3bde3d24d35898f2"
+          test "$(git hash-object webui/page/kpm.js)" = "ea8cf0d7c031524717379babedb76aeb2bf01427"
+          test "$(git hash-object webui/page/patch.js)" = "1dc469accec499f294374600f92f55ba55796064"
+          test "$(git hash-object webui/route.js)" = "31179747cc1214aa8671b28b12cc51ee559f9030"
+          sh -n module/customize.sh
+          ! grep -Fq 'Hot update webui' module/customize.sh
+          grep -Fq "margin: auto !important" webui/styles.css
+          grep -Fq "md-outlined-text-field:focus-within" webui/styles.css
+          grep -Fq "versionCode=18" module/module.prop
+          echo "Upstream UI logic unchanged; only UI CSS/SVG changed."
 
-    - name: Checkout ABI-fixed EXP core
-      uses: actions/checkout@v4
-      with:
-        repository: Zhanfg/KPatch-Next-EXP
-        ref: main
-        path: core
-        submodules: recursive
+      - name: Checkout pinned ABI-fixed EXP core
+        uses: actions/checkout@v4
+        with:
+          repository: Zhanfg/KPatch-Next-EXP
+          ref: eacde245b912be94bde243dcc87fa3a0f922c038
+          path: core
+          submodules: recursive
 
-    - name: Build patched KPIMG from this fork (never use the upstream KPIMG)
-      shell: bash
-      run: |
-        set -euo pipefail
-        curl -fL --retry 3 -o /tmp/arm-toolchain.tar.xz \
-          https://armkeil.blob.core.windows.net/developer/Files/downloads/gnu/12.2.rel1/binrel/arm-gnu-toolchain-12.2.rel1-x86_64-aarch64-none-elf.tar.xz
-        mkdir -p /tmp/kp-toolchain
-        tar -xJf /tmp/arm-toolchain.tar.xz -C /tmp/kp-toolchain --strip-components=1
-        export TARGET_COMPILE=/tmp/kp-toolchain/bin/aarch64-none-elf-
-        make -C core/kernel
-        test -s core/kernel/kpimg
-        "${TARGET_COMPILE}nm" -a core/kernel/kpimg.elf | grep -F '__kp_symbol_is_su_allow_uid'
-        mkdir -p module/bin
-        cp core/kernel/kpimg module/bin/kpimg
-        printf 'Patched EXP core SHA: %s\n' "$(git -C core rev-parse HEAD)" > module/ABI-COMPAT-BUILD.txt
-        printf 'Kernel, kptools and kpatch: compiled from Zhanfg/KPatch-Next-EXP main\n' >> module/ABI-COMPAT-BUILD.txt
-        sha256sum module/bin/kpimg
+      - name: Install aarch64 bare-metal compiler
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fL --retry 3 -o /tmp/arm-toolchain.tar.xz \
+            https://armkeil.blob.core.windows.net/developer/Files/downloads/gnu/12.2.rel1/binrel/arm-gnu-toolchain-12.2.rel1-x86_64-aarch64-none-elf.tar.xz
+          mkdir -p /tmp/kp-toolchain
+          tar -xJf /tmp/arm-toolchain.tar.xz -C /tmp/kp-toolchain --strip-components=1
+          echo 'TARGET_COMPILE=/tmp/kp-toolchain/bin/aarch64-none-elf-' >> "$GITHUB_ENV"
 
-    # Build the matching Android CLIs from the *same* core checkout as kpimg.
-    # 0.13.14 is the latest EXP release, but its prebuilt kptools predates
-    # main-branch symbol-resolution and patcher fixes.
-    - name: Setup Android NDK
-      uses: nttld/setup-ndk@v1
-      id: android-ndk
-      with:
-        ndk-version: r26b
-        add-to-path: true
+      - name: Compile patched kpimg and check Nohello ABI
+        shell: bash
+        run: |
+          set -euo pipefail
+          make -C core/kernel
+          test -s core/kernel/kpimg
+          /tmp/kp-toolchain/bin/aarch64-none-elf-nm -a core/kernel/kpimg.elf |
+            grep -F '__kp_symbol_is_su_allow_uid'
+          mkdir -p module/bin
+          cp core/kernel/kpimg module/bin/kpimg
+          printf 'KPIMG/source SHA: %s\n' "$(git -C core rev-parse HEAD)" > module/BUILD-PROVENANCE.txt
+          printf '%s\n' 'Only Nohello legacy ABI export is patched in core; no KPM binary bundled.' >> module/BUILD-PROVENANCE.txt
 
-    - name: Build matching Android kptools and kpatch from EXP source
-      shell: bash
-      env:
-        NDK_ROOT: ${{ steps.android-ndk.outputs.ndk-path }}
-      run: |
-        set -euo pipefail
-        export TARGET_COMPILE=placeholder
-        make -C core/kernel hdr
-        for tool in tools user; do
-          cmake -S "core/$tool" -B "core/$tool/build/android" \
-            -DCMAKE_TOOLCHAIN_FILE="$NDK_ROOT/build/cmake/android.toolchain.cmake" \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DANDROID_PLATFORM=android-33 \
-            -DANDROID_ABI=arm64-v8a
-          cmake --build "core/$tool/build/android" -j 2
-        done
-        install -m 0755 core/tools/build/android/kptools module/bin/kptools
-        install -m 0755 core/user/build/android/kpatch module/bin/kpatch
-        file module/bin/kptools module/bin/kpatch
-        "$NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf" -h module/bin/kptools | grep -E 'Class:|Machine:'
-        "$NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf" -h module/bin/kpatch | grep -E 'Class:|Machine:'
-        echo 'Android CLI source: Zhanfg/KPatch-Next-EXP main, same revision as kpimg' >> module/ABI-COMPAT-BUILD.txt
-        sha256sum module/bin/kptools module/bin/kpatch module/bin/kpimg
+      - name: Setup Android NDK
+        uses: nttld/setup-ndk@v1
+        id: android-ndk
+        with:
+          ndk-version: r26b
+          add-to-path: true
 
-    - name: Download magiskboot binary
-      run: |
-        TAG="${{ env.magiskboot }}"
-        ARGS=("-R" "topjohnwu/Magisk" "-p" "Magisk*.apk" "-O" "magisk.apk")
-        if [ "$TAG" != "latest" ]; then
-          gh release download "$TAG" "${ARGS[@]}"
-        else
-          gh release download "${ARGS[@]}"
-        fi
-        unzip -p magisk.apk 'lib/arm64-v8a/libmagiskboot.so' > module/bin/magiskboot
-        rm magisk.apk
+      - name: Compile matching Android kptools and kpatch
+        shell: bash
+        env:
+          NDK_ROOT: ${{ steps.android-ndk.outputs.ndk-path }}
+        run: |
+          set -euo pipefail
+          make -C core/kernel hdr
+          for tool in tools user; do
+            cmake -S "core/$tool" -B "core/$tool/build/android" \
+              -DCMAKE_TOOLCHAIN_FILE="$NDK_ROOT/build/cmake/android.toolchain.cmake" \
+              -DCMAKE_BUILD_TYPE=Release \
+              -DANDROID_PLATFORM=android-33 -DANDROID_ABI=arm64-v8a
+            cmake --build "core/$tool/build/android" -j 2
+          done
+          install -m 0755 core/tools/build/android/kptools module/bin/kptools
+          install -m 0755 core/user/build/android/kpatch module/bin/kpatch
+          sha256sum module/bin/kpimg module/bin/kptools module/bin/kpatch
 
-    - name: Setup pnpm
-      uses: pnpm/action-setup@v4
-      with:
-        version: '10.28.2'
+      - name: Get Magiskboot v30.6
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release download v30.6 -R topjohnwu/Magisk -p 'Magisk*.apk' -O /tmp/magisk.apk
+          unzip -p /tmp/magisk.apk 'lib/arm64-v8a/libmagiskboot.so' > module/bin/magiskboot
+          test -s module/bin/magiskboot
+          chmod 0755 module/bin/magiskboot
 
-    - name: Setup Node
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20.19.x'
-        cache: 'pnpm'
-        cache-dependency-path: webui/pnpm-lock.yaml
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.28.2
 
-    - name: Validate staged-only installer
-      shell: bash
-      run: |
-        set -euo pipefail
-        sh -n module/customize.sh
-        test -s module/module.prop
-        grep -Fq 'id=KPatch-Next' module/module.prop
-        grep -Fq 'webroot/index.html' module/customize.sh
-        ! grep -Fq 'Hot update webui' module/customize.sh
-        echo 'Installer staging checks passed.'
-    - name: Portable SVG verification
-      shell: bash
-      run: |
-        set -euo pipefail
-        node --check webui/icons.js
-        node --check webui/page/kpm.js
-        node --check webui/page/patch.js
-        node --check webui/index.js
-        node --check webui/kpm-control.js
-        node --check webui/viewport.js
-        node webui/tests/check-icons.mjs
-        node webui/tests/control-ime.test.mjs
-        node webui/tests/startup-watchdog.test.mjs
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.19.x'
+          cache: pnpm
+          cache-dependency-path: webui/pnpm-lock.yaml
 
-    - name: build webroot
-      run: |
-        cd webui
-        pnpm install --frozen-lockfile
-        pnpm build
+      - name: Build original WebUI with minimal SVG/CSS patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check webui/index.js
+          node --check webui/page/kpm.js
+          node --check webui/page/patch.js
+          node --check webui/route.js
+          cd webui
+          pnpm install --frozen-lockfile
+          pnpm build
+          test -s ../module/webroot/index.html
 
-    - name: Upload artifact
-      uses: actions/upload-artifact@v6
-      with:
-        name: ${{ env.MODULE_NAME }}-${{ github.run_number }}
-        path: 'module'
+      - name: Verify staged module and create flashable-manager ZIP
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s module/module.prop
+          test -s module/customize.sh
+          test -s module/bin/kpimg
+          test -s module/bin/kpatch
+          test -s module/bin/kptools
+          test -s module/bin/magiskboot
+          test -s module/webroot/index.html
+          grep -Fq 'versionCode=18' module/module.prop
+          (cd module && zip -q -r ../KPatch-Next-EXP-CleanUI-Nohello-r1.zip .)
+          unzip -t KPatch-Next-EXP-CleanUI-Nohello-r1.zip | tail -1
+          sha256sum KPatch-Next-EXP-CleanUI-Nohello-r1.zip
 
-    - name: Check if valid to release
-      id: check_tag
-      run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            echo "need_release=false" >> $GITHUB_OUTPUT
-          else
-            git fetch --tags
-            VERSION="$(jq -r .version update.json)"
-            if [ -z "$VERSION" ]; then
-              echo "need_release=false" >> $GITHUB_OUTPUT
-            elif git tag | grep -qx "^${VERSION}"; then
-              echo "need_release=false" >> $GITHUB_OUTPUT
-            else
-              echo "version=${VERSION}" >> $GITHUB_OUTPUT
-              echo "need_release=true" >> $GITHUB_OUTPUT
-            fi
-          fi
-
-  release:
-    runs-on: ubuntu-latest
-    needs: build
-    if: needs.build.outputs.check_tag == 'true'
-    steps:
-    - name: Checkout
-      uses: actions/checkout@v6
-      with:
-        fetch-depth: 2
-
-    - name: Download artifact
-      uses: actions/download-artifact@v7
-      with:
-        name: ${{ env.MODULE_NAME }}-${{ github.run_number }}
-        path: ${{ env.MODULE_NAME }}
-
-    - name: Zip for release
-      run: cd ${{ env.MODULE_NAME }} && zip -r ../${{ env.MODULE_NAME }}.zip .
-
-    - name: Generate changelog
-      run: |
-        CHANGELOG_RAW=$(git diff HEAD^ HEAD -- "CHANGELOG.md" | grep '^+[^+]' | sed 's/^+//')
-        {
-          echo "CHANGELOG<<EOF"
-          echo -e "${CHANGELOG_RAW}"
-          echo "EOF"
-        } >> $GITHUB_ENV
-
-    - name: Create Release
-      uses: softprops/action-gh-release@v2
-      with:
-        tag_name: ${{ needs.build.outputs.version }}
-        name: ${{ needs.build.outputs.version }}
-        body: ${{ env.CHANGELOG }}
-        files: ${{ env.MODULE_NAME }}.zip
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: KPatch-Next-EXP-CleanUI-Nohello-r1
+          path: KPatch-Next-EXP-CleanUI-Nohello-r1.zip
+          if-no-files-found: error
+          retention-days: 30

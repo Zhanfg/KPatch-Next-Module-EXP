@@ -1,5 +1,3 @@
-import { iconSvg } from '../icons.js';
-import { showKpmControlDialog } from '../kpm-control.js';
 import { exec, spawn, toast } from 'kernelsu-alt';
 import { modDir, persistDir, initInfo, MAX_CHUNK_SIZE, escapeShell, linkRedirect } from '../index.js';
 import { getString } from '../language.js';
@@ -217,20 +215,17 @@ async function refreshKpmList() {
 
 function openControlDialog(module) {
     if (!module.loaded) return;
-    // ctl0 is a live command; embedded boot options are a separate section
-    // and are only staged until the user explicitly repairs the boot image.
-    showKpmControlDialog({
-        moduleName: module.name,
-        mode: 'runtime',
-        embedAvailable: isEmbeddedModule(module),
-        event: module.load_event,
-        embedArgs: module.args || '',
-        onRuntime: async (value) => {
-            await controlModule(module.name, value);
-            await refreshKpmList();
-            initInfo();
-        }
-    });
+    const dialog = document.getElementById('control-dialog');
+    const textField = dialog.querySelector('md-outlined-text-field');
+    dialog.querySelector('.cancel').onclick = () => dialog.close();
+    dialog.querySelector('.confirm').onclick = async () => {
+        await controlModule(module.name, textField.value);
+        await refreshKpmList();
+        initInfo();
+        textField.value = '';
+        dialog.close();
+    };
+    dialog.show();
 }
 
 function openRemoveDialog(module) {
@@ -282,12 +277,12 @@ function renderKpmList() {
             <md-divider></md-divider>
             <div class="module-card-actions">
                 ${enabledSwitch}
-                <button type="button" class="control kpm-action" ${module.loaded ? '' : 'disabled'} aria-label="${escapeHtml(getString('title_control_kpmodule'))}">
-                    ${iconSvg('tune')}
-                <span>${escapeHtml(getString('button_control'))}</span></button>
-                <button type="button" class="unload kpm-action" aria-label="${escapeHtml(getString(isEmbeddedModule(module) ? 'button_manual_exit' : module.installed ? 'button_remove' : 'button_unload'))}">
-                    ${iconSvg(isEmbeddedModule(module) ? 'power' : 'delete')}
-                <span>${escapeHtml(getString(isEmbeddedModule(module) ? 'button_manual_exit' : module.installed ? 'button_remove' : 'button_unload'))}</span></button>
+                <md-filled-tonal-icon-button class="control" ${module.loaded ? '' : 'disabled'} aria-label="${escapeHtml(getString('title_control_kpmodule'))}">
+                    <md-icon><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="m370-80-16-128q-13-5-24.5-12T307-235l-119 50L78-375l103-78q-1-7-1-13.5v-27q0-6.5 1-13.5L78-585l110-190 119 50q11-8 23-15t24-12l16-128h220l16 128q13 5 24.5 12t22.5 15l119-50 110 190-103 78q1 7 1 13.5v27q0 6.5-2 13.5l103 78-110 190-118-50q-11 8-23 15t-24 12L590-80H370Zm70-80h79l14-106q31-8 57.5-23.5T639-327l99 41 39-68-86-65q5-14 7-29.5t2-31.5q0-16-2-31.5t-7-29.5l86-65-39-68-99 42q-22-23-48.5-38.5T533-694l-13-106h-79l-14 106q-31 8-57.5 23.5T321-633l-99-41-39 68 86 64q-5 15-7 30t-2 32q0 16 2 31t7 30l-86 65 39 68 99-42q22 23 48.5 38.5T427-266l13 106Zm42-180q58 0 99-41t41-99q0-58-41-99t-99-41q-59 0-99.5 41T342-480q0 58 40.5 99t99.5 41Zm-2-140Z" /></svg></md-icon>
+                </md-filled-tonal-icon-button>
+                <md-filled-tonal-icon-button class="unload" aria-label="${escapeHtml(getString(isEmbeddedModule(module) ? 'button_manual_exit' : module.installed ? 'button_remove' : 'button_unload'))}">
+                    <md-icon><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z"/></svg></md-icon>
+                </md-filled-tonal-icon-button>
             </div>
         `;
 
@@ -430,7 +425,7 @@ async function handleFileUpload(accept, containerId, onSelected) {
                     <div class="module-card-subtitle" id="upload-progress-text">${escapeHtml(getString('msg_please_wait'))}</div>
                 </div>
                 <md-outlined-icon-button id="cancel-upload" aria-label="${escapeHtml(getString('button_cancel'))}">
-                    ${iconSvg('close')}
+                    <md-icon><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"/></svg></md-icon>
                 </md-outlined-icon-button>
             </div>
             <div class="module-card-content"><md-linear-progress indeterminate></md-linear-progress></div>
@@ -608,6 +603,12 @@ export function initKPMPage() {
 
     menuBtn.onclick = () => menu.show();
     document.getElementById('refresh-kpm-list-menu').onclick = () => refreshKpmList();
+
+    const controlDialog = document.getElementById('control-dialog');
+    const controlTextField = controlDialog.querySelector('md-outlined-text-field');
+    controlTextField.addEventListener('input', () => {
+        controlDialog.querySelector('.confirm').disabled = !controlTextField.value;
+    });
 
     document.getElementById('load').onclick = () => openModeDialog();
     setupPullToRefresh(document.querySelector('#kpm-page .page-content'), refreshKpmList);

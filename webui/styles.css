@@ -357,60 +357,8 @@ body {
     justify-content: flex-end;
 }
 
-/* Fixed SVG and readable labels: no font glyphs, no icon-only controls. */
-.module-card-actions {
-    flex-wrap: wrap;
-    align-items: center;
-}
-.module-card-actions .kpm-action {
-    min-height: 42px;
-    min-width: 90px;
-    border: 1px solid var(--md-sys-color-outline-variant);
-    border-radius: 999px;
-    background: var(--md-sys-color-surface-container-high);
-    color: var(--md-sys-color-on-surface);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    padding: 0 16px;
-    font: inherit;
-    font-size: 14px;
-    font-weight: 500;
-    white-space: nowrap;
-    cursor: pointer;
-    transition: background 140ms ease, opacity 140ms ease;
-}
-.module-card-actions .kpm-action .kp-icon {
-    width: 20px;
-    height: 20px;
-    min-width: 20px;
-}
-.module-card-actions .kpm-action:disabled {
-    opacity: .42;
-    cursor: not-allowed;
-}
-.module-card-actions .kpm-action.kpm-danger {
-    background: var(--md-sys-color-error-container);
-    color: var(--md-sys-color-on-error-container);
-    border-color: transparent;
-}
-.module-card-actions .kpm-action:focus-visible {
-    outline: 2px solid var(--md-sys-color-primary);
-    outline-offset: 2px;
-}
-#kpm-page .module-card-actions .kpm-action {
-    flex: 1 1 120px;
-}
-@media (max-width: 360px) {
-    .module-card-actions { gap: 8px; }
-    .module-card-actions .kpm-action { padding-inline: 9px; font-size: 13px; }
-    #kpm-page .module-card-actions .kpm-action { min-width: 0; }
-}
-/* Keep the final KPM card's buttons clear of the floating action button. */
-#kpm-page .page-content {
-    padding-bottom: 112px;
-    scroll-padding-bottom: 112px;
+.module-card-actions md-filled-tonal-icon-button {
+    --md-filled-tonal-icon-button-container-width: 64px;
 }
 
 .app-item .tag-wrapper {
@@ -702,24 +650,25 @@ md-menu-item label {
     color: var(--md-sys-color-on-secondary-container);
 }
 
-.bottom-bar-item > .kp-icon {
+.bottom-bar-item md-icon {
     position: relative;
     z-index: 1;
     height: 32px;
-    width: 24px;
-    display: block;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-.bottom-bar-item > .kp-icon[slot="selected"] {
+.bottom-bar-item md-icon[slot="selected"] {
     display: none;
 }
 
-.bottom-bar-item[selected] > .kp-icon:not([slot="selected"]) {
+.bottom-bar-item[selected] md-icon:not([slot="selected"]) {
     display: none;
 }
 
-.bottom-bar-item[selected] > .kp-icon[slot="selected"] {
-    display: block;
+.bottom-bar-item[selected] md-icon[slot="selected"] {
+    display: flex;
 }
 
 .bottom-bar-item-text {
@@ -751,6 +700,7 @@ md-dialog .checkbox-item {
 }
 
 .text-field-dialog {
+    /* Material Web's native dialog owns vertical centering. */
     margin: auto !important;
 }
 
@@ -781,52 +731,27 @@ md-dialog .checkbox-item {
     padding-bottom: 72px;
 }
 
-/* Portable SVG icons. Fixed viewBox + explicit dimensions; never require
- * Material Symbols, PUA Unicode characters, platform emoji or icon fonts. */
-.kp-icon {
-    display: block;
-    width: 24px;
-    height: 24px;
-    min-width: 24px;
-    flex-shrink: 0;
-    fill: currentColor;
-    vertical-align: middle;
-}
-.kp-icon[slot="trailing-icon"] {
-    cursor: pointer;
+/* Android IME: keep the bottom navigation from appearing above the keyboard.
+ * Hide it while a text input has focus; do not resize/reparent/move it.
+ * Native Material dialogs remain free to reposition into the visual viewport.
+ * :focus-within crosses the Material text-field host shadow boundary.
+ */
+@supports selector(body:has(*)) {
+    body:has(md-outlined-text-field:focus-within, md-filled-text-field:focus-within, input:focus, textarea:focus) .bottom-bar {
+        opacity: 0;
+        pointer-events: none;
+        transition: none;
+    }
 }
 
-/* Android WebView adjustResize / visualViewport IME behavior.
- * The bar is shifted below the IME rather than reflowed above it.
- * Only Material dialogs remain visible and the active text field can be panned.
- */
-html.kp-ime-visible .bottom-bar {
-    transform: translate3d(0, var(--kp-ime-occlusion, 0px), 0) !important;
-    opacity: 0 !important;
-    pointer-events: none !important;
-    transition: none !important;
+/* Card and FAB clearance on narrow screens; no native control replacement. */
+#kpm-page .page-content {
+    padding-bottom: 108px;
+    scroll-padding-bottom: 108px;
 }
-#control-dialog .kpm-control-section {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-#control-dialog .kpm-control-hint {
-    font-size: 12px;
-    line-height: 1.45;
-    color: var(--md-sys-color-on-surface-variant);
-}
-#control-dialog [slot="content"] {
-    overflow-y: auto;
-    max-height: min(58dvh, 490px);
-}
-#control-dialog [slot="actions"] {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: flex-end;
-    gap: 6px;
-}
-#control-dialog .kpm-control-section[hidden],
-#control-dialog [hidden] {
-    display: none !important;
+@media (max-width: 360px) {
+    .module-card-actions {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
 }
