@@ -22,8 +22,8 @@
             var type = error && error.name ? error.name : 'Error';
             var message = error && error.message ? String(error.message) : '';
             // Never print URLs, filesystem paths, or likely credentials in UI.
-            message = message.replace(/https?:\\/\\/[^\\s]+/g, '[URL]')
-                             .replace(/\\/(?:data|sdcard|storage)\\/[^\\s]+/g, '[path]')
+            message = message.replace(/https?:\/\/[^\s]+/g, '[URL]')
+                             .replace(/\/(?:data|sdcard|storage)\/[^\s]+/g, '[path]')
                              .replace(/(?:sk-|gh[pousr]_)[A-Za-z0-9_-]{8,}/g, '[REDACTED]');
             return phase + ' · ' + type + (message ? ': ' + message.slice(0, 160) : '');
         }
