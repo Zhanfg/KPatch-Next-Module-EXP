@@ -1,7 +1,7 @@
 id=KPatch-Next
 name=KPatch-Next-EXP
-version=v0.0.9-clean-ui-nohello-r1
-versionCode=18
+version=v0.0.9-clean-ui-nohello-r1-hotfix1
+versionCode=19
 author=rifsxd, KOWX712, 741afb7
 description=Standalone implementation of KPM support for Magisk/KernelSU
 banner=banner.png
