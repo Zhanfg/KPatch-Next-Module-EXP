@@ -126,7 +126,10 @@ jobs:
         node --check webui/page/kpm.js
         node --check webui/page/patch.js
         node --check webui/index.js
+        node --check webui/kpm-control.js
+        node --check webui/viewport.js
         node webui/tests/check-icons.mjs
+        node webui/tests/control-ime.test.mjs
 
     - name: build webroot
       run: |
