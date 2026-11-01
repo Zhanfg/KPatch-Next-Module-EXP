@@ -420,6 +420,12 @@ body {
     --md-filled-tonal-icon-button-container-height: 48px;
 }
 
+.module-card-action-buttons md-icon-button {
+    width: 48px;
+    height: 48px;
+    --md-icon-button-icon-color: var(--md-sys-color-on-surface-variant);
+}
+
 .app-item .tag-wrapper {
     display: flex;
     justify-content: flex-start;
