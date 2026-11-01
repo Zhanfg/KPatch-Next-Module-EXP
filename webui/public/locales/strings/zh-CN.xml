@@ -102,4 +102,12 @@
     <string name="msg_error_loading_apps">加载应用时出错：</string>
     <string name="msg_error_rendering_apps">渲染应用时出错：</string>
     <string name="msg_unknown">未知</string>
+    <string name="label_runtime_control">运行时控制（立即生效）</string>
+    <string name="label_runtime_parameters">运行时命令参数</string>
+    <string name="label_boot_options">启动嵌入配置（下次修补生效）</string>
+    <string name="label_boot_parameters">启动嵌入参数</string>
+    <string name="hint_boot_repatch_required">触发事件和嵌入参数只会保存到本次修补草稿；必须重新修补启动镜像才能生效。</string>
+    <string name="button_execute_now">立即执行</string>
+    <string name="button_save_and_patch">前往修补</string>
+    <string name="button_save_options">保存配置</string>
 </resources>
