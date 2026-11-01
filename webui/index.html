@@ -59,11 +59,11 @@
                 window.__kpStartup.fail();
             }
         });
-        document.addEventListener('DOMContentLoaded', function () {
-            setTimeout(function () {
-                if (!settled) window.__kpStartup.fail();
-            }, 6000);
-        });
+        // Start in the HEAD immediately. DOMContentLoaded waits for module scripts
+        // and might never fire if the bundled JS is stalled during import/evaluation.
+        setTimeout(function () {
+            if (!settled) window.__kpStartup.fail();
+        }, 6000);
     }());
     </script>
     <script src="index.js" type="module"></script>
