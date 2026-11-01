@@ -24,7 +24,7 @@ function mock() {
     const document = {
         body,
         getElementById:id=>id==='splash'?dom.splash:dom[id]||null,
-        createElement:tag=>({tag,style:{},appendChild(child){this.children=(this.children||[]).concat(child)},setAttribute(){}}),
+        createElement:tag=>({tag,style:{},appendChild(child){this.children=(this.children||[]).concat(child)},setAttribute(){},remove(){if(this.id)delete dom[this.id]}}),
         addEventListener:(name,fn)=>events[name]=fn,
     };
     const window = {addEventListener:(name,fn)=>events[name]=fn};
@@ -53,4 +53,26 @@ function mock() {
     assert.ok(env.splash.classList.items.includes('exit'));
     assert.ok(env.document.getElementById('kp-startup-recovery'),'bundle load failure must show recovery');
 }
-console.log('Startup watchdog: ready, stuck, and failed-bundle paths PASS');
+
+{
+    const env=mock();
+    env.window.__kpStartup.ready();
+    env.window.__kpStartup.fail('kpm-page',new TypeError('initKPMPage failed'));
+    assert.equal(env.document.getElementById('kp-startup-recovery'),null,
+        'a post-ready failure must never open blocking recovery UI');
+    assert.ok(env.document.getElementById('kp-component-warning'),
+        'recoverable page failure needs actionable diagnostic');
+    const warning=env.document.getElementById('kp-component-warning');
+    const detail=warning.children.find(x=>x.id==='kp-component-warning-details');
+    assert.ok(detail.textContent.includes('kpm-page'));
+    assert.ok(detail.textContent.includes('TypeError'));
+}
+{
+    const env=mock();
+    env.timerFns.find(x=>x.ms===6000).fn();
+    assert.ok(env.document.getElementById('kp-startup-recovery'),'timeout is initially shown');
+    env.window.__kpStartup.ready();
+    assert.equal(env.document.getElementById('kp-startup-recovery'),null,
+        'late startup recovery must clear a stale blocking error');
+}
+console.log('Startup watchdog: startup, late recovery, and post-ready errors PASS');
