@@ -105,7 +105,7 @@ function setRehookMode(isEnable) {
 }
 
 function getMaxChunkSize() {
-    exec('getconf ARG_MAX').then((result) => {
+    return exec('getconf ARG_MAX').then((result) => {
         try {
             const max_arg = parseInt(result.stdout.trim());
             if (!isNaN(max_arg)) {
