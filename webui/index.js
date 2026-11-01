@@ -163,9 +163,9 @@ document.addEventListener('DOMContentLoaded', () => {
             item.onclick = () => reboot(item.getAttribute('data-reason'));
         });
         document.getElementById('reboot-fab').onclick = () => reboot();
-        getMaxChunkSize();
-
         // The homepage is usable before asynchronous system probes complete.
+        // A synchronous native bridge exception must not mark a functional UI
+        // as broken, so all platform requests start after ready().
         window.__kpStartup?.ready();
     } catch (error) {
         console.error('WebUI early startup failed', error);
@@ -173,24 +173,37 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
-    // Load translations separately. Native command failures can be arbitrarily
-    // slow on mismatched drivers/patches, so never await them in splash teardown.
+    // Each subpage initializes independently; a missing bridge API or failed
+    // package query must not cause the global startup error banner.
+    function initPage(stage, callback) {
+        try {
+            callback();
+        } catch (error) {
+            console.error('WebUI subpage unavailable: ' + stage, error);
+            window.__kpStartup?.warn(stage);
+        }
+    }
+
+    // Never block subpage handlers on language fetches: these can fail or stall
+    // independently in Android WebViews with restricted network access.
+    initPage('exclude-init', () => excludeModule.initExcludePage());
+    initPage('kpm-init', () => kpmModule.initKPMPage());
+
     Promise.resolve().then(() => loadTranslations()).catch(error => {
         console.error('WebUI translation setup failed', error);
-    }).finally(() => {
-        try {
-            excludeModule.initExcludePage();
-            kpmModule.initKPMPage();
-        } catch (error) {
-            console.error('WebUI page initialization failed', error);
-            window.__kpStartup?.fail();
-        }
+        window.__kpStartup?.warn('translation-init');
+    });
+    Promise.resolve().then(() => getMaxChunkSize()).catch(error => {
+        console.error('Failed to probe Android command argument limit', error);
+        window.__kpStartup?.warn('argmax-probe');
     });
     Promise.resolve().then(() => updateStatus()).catch(error => {
         console.error('Failed to query KPatch runtime version', error);
+        window.__kpStartup?.warn('runtime-status');
     });
     Promise.resolve().then(() => initInfo()).catch(error => {
         console.error('Failed to query device metadata', error);
+        window.__kpStartup?.warn('device-info');
     });
 });
 
