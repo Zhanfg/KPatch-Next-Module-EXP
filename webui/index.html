@@ -5,11 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>KPatch-Next-EXP</title>
     <!-- Independent boot watchdog: runs even if the bundled module cannot execute. -->
+    <!-- Standalone startup monitor: no dependency on the external JS bundle. -->
     <script>
     (function () {
         'use strict';
         var settled = false;
         var booted = false;
+        var phase = 'bundle';
+        var recovery = null;
         function hideSplash() {
             var splash = document.getElementById('splash');
             if (splash) {
@@ -17,41 +20,77 @@
                 setTimeout(function () { splash.remove(); }, 420);
             }
         }
-        function showRecovery() {
-            if (document.getElementById('kp-startup-recovery')) return;
+        function removeRecovery() {
+            if (recovery) recovery.remove();
+            recovery = null;
+        }
+        function showRecovery(severity, stage) {
+            // Only enum-like stage values are displayed; never expose shell
+            // output, exception messages, module names, or file paths.
+            var known = {
+                bundle:'bundle', ime:'ime', navigation:'navigation',
+                'language-dialog':'language-dialog',
+                'patch-controls':'patch-controls',
+                'reboot-controls':'reboot-controls',
+                translations:'translations', 'exclude-page':'exclude-page',
+                'kpm-page':'kpm-page', 'runtime-status':'runtime-status',
+                'device-info':'device-info'
+            };
+            var code = known[stage] || 'startup';
+            if (recovery && recovery.dataset.stage === code) return;
+            removeRecovery();
             var host = document.createElement('div');
             host.id = 'kp-startup-recovery';
-            host.setAttribute('role', 'alert');
-            host.style.cssText = 'position:fixed;top:calc(var(--top-inset, 0px) + 76px);left:16px;right:16px;max-width:500px;margin:auto;z-index:110;padding:16px;border-radius:20px;background:var(--md-sys-color-error-container,#f9dedc);color:var(--md-sys-color-on-error-container,#401c1c);font:14px/1.5 system-ui,sans-serif;box-shadow:0 3px 12px #0002;';
+            host.dataset.stage = code;
+            host.setAttribute('role', 'status');
+            host.style.cssText = 'position:fixed;top:calc(var(--top-inset,0px) + 72px);left:12px;right:12px;max-width:500px;margin:auto;z-index:110;padding:12px 14px;border-radius:16px;background:var(--md-sys-color-surface-container-high,#e9eaf1);color:var(--md-sys-color-on-surface,#20212a);font:13px/1.45 system-ui,sans-serif;box-shadow:0 3px 12px #0002;';
             var title = document.createElement('div');
-            title.textContent = 'WebUI 启动异常 / Startup incomplete';
-            title.style.cssText = 'font-weight:650;margin-bottom:6px;';
+            title.textContent = (severity === 'fatal' ? 'WebUI 启动失败 / Startup failed' : 'WebUI 部分功能异常 / Partial issue') + ' [' + code + ']';
+            title.style.cssText = 'font-weight:650;margin-bottom:4px;';
             var message = document.createElement('div');
-            message.textContent = '界面未能完成初始化。可重试打开；此提示不会修改内核或系统设置。';
-            var retry = document.createElement('button');
-            retry.type = 'button';
-            retry.textContent = '重新打开 / Retry';
-            retry.style.cssText = 'margin-top:12px;border-radius:100px;border:0;padding:10px 16px;background:#825c52;color:white;';
-            retry.onclick = function () { location.reload(); };
+            message.textContent = severity === 'fatal'
+                ? '启动脚本未能完成执行。请检查 WebUI 运行环境或重新打开。'
+                : '页面仍可使用，但这个功能尚未成功初始化。';
+            var actions = document.createElement('div');
+            actions.style.cssText = 'display:flex;gap:8px;margin-top:8px;';
+            var dismiss = document.createElement('button');
+            dismiss.type = 'button';
+            dismiss.textContent = '关闭';
+            dismiss.style.cssText = 'border-radius:100px;border:0;padding:7px 12px;background:transparent;color:inherit;';
+            dismiss.onclick = removeRecovery;
+            actions.appendChild(dismiss);
+            if (severity === 'fatal') {
+                var retry = document.createElement('button');
+                retry.type = 'button';
+                retry.textContent = '重试 / Retry';
+                retry.style.cssText = 'border-radius:100px;border:0;padding:7px 12px;background:#516b94;color:#fff;';
+                retry.onclick = function () { location.reload(); };
+                actions.appendChild(retry);
+            }
             host.appendChild(title);
             host.appendChild(message);
-            host.appendChild(retry);
+            host.appendChild(actions);
             document.body.appendChild(host);
+            recovery = host;
         }
         window.__kpStartup = {
+            setPhase: function (name) { phase = name; },
             ready: function () {
                 booted = true;
-                if (!settled) {
-                    settled = true;
-                    hideSplash();
-                }
+                settled = true;
+                hideSplash();
+                // If the bundle was slow rather than broken, remove the
+                // timeout notice instead of leaving a false failure banner.
+                removeRecovery();
+            },
+            warn: function (name) {
+                if (!booted) return;
+                showRecovery('warning', name);
             },
             fail: function () {
-                if (!settled) {
-                    settled = true;
-                    hideSplash();
-                }
-                showRecovery();
+                settled = true;
+                hideSplash();
+                showRecovery('fatal', phase);
             }
         };
         window.addEventListener('error', function (event) {
@@ -59,11 +98,9 @@
                 window.__kpStartup.fail();
             }
         });
-        // Start in the HEAD immediately. DOMContentLoaded waits for module scripts
-        // and might never fire if the bundled JS is stalled during import/evaluation.
         setTimeout(function () {
             if (!settled) window.__kpStartup.fail();
-        }, 6000);
+        }, 10000);
     }());
     </script>
     <script src="index.js" type="module"></script>
