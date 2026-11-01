@@ -26,6 +26,8 @@
     <string name="button_cancel">Cancel</string>
     <string name="button_ok">OK</string>
     <string name="button_load">Load</string>
+    <string name="button_control">Control</string>
+    <string name="button_config">Configure</string>
     <string name="button_unload">Unload</string>
     <string name="button_refresh">Refresh</string>
     <string name="button_load_mode">Load mode</string>

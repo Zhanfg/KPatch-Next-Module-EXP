@@ -26,6 +26,8 @@
     <string name="button_cancel">取消</string>
     <string name="button_ok">確定</string>
     <string name="button_load">載入</string>
+    <string name="button_control">控制</string>
+    <string name="button_config">設定</string>
     <string name="button_unload">取消載入</string>
     <string name="button_refresh">重新整理</string>
     <!-- Labels -->

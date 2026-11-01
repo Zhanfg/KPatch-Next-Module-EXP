@@ -278,12 +278,12 @@ function renderKpmList() {
             <md-divider></md-divider>
             <div class="module-card-actions">
                 ${enabledSwitch}
-                <md-filled-tonal-icon-button class="control" ${module.loaded ? '' : 'disabled'} aria-label="${escapeHtml(getString('title_control_kpmodule'))}">
+                <button type="button" class="control kpm-action" ${module.loaded ? '' : 'disabled'} aria-label="${escapeHtml(getString('title_control_kpmodule'))}">
                     ${iconSvg('tune')}
-                </md-filled-tonal-icon-button>
-                <md-filled-tonal-icon-button class="unload" aria-label="${escapeHtml(getString(isEmbeddedModule(module) ? 'button_manual_exit' : module.installed ? 'button_remove' : 'button_unload'))}">
+                <span>${escapeHtml(getString('button_control'))}</span></button>
+                <button type="button" class="unload kpm-action" aria-label="${escapeHtml(getString(isEmbeddedModule(module) ? 'button_manual_exit' : module.installed ? 'button_remove' : 'button_unload'))}">
                     ${iconSvg(isEmbeddedModule(module) ? 'power' : 'delete')}
-                </md-filled-tonal-icon-button>
+                <span>${escapeHtml(getString(isEmbeddedModule(module) ? 'button_manual_exit' : module.installed ? 'button_remove' : 'button_unload'))}</span></button>
             </div>
         `;
 

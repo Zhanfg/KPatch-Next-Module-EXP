@@ -357,8 +357,60 @@ body {
     justify-content: flex-end;
 }
 
-.module-card-actions md-filled-tonal-icon-button {
-    --md-filled-tonal-icon-button-container-width: 64px;
+/* Fixed SVG and readable labels: no font glyphs, no icon-only controls. */
+.module-card-actions {
+    flex-wrap: wrap;
+    align-items: center;
+}
+.module-card-actions .kpm-action {
+    min-height: 42px;
+    min-width: 90px;
+    border: 1px solid var(--md-sys-color-outline-variant);
+    border-radius: 999px;
+    background: var(--md-sys-color-surface-container-high);
+    color: var(--md-sys-color-on-surface);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 0 16px;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 500;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background 140ms ease, opacity 140ms ease;
+}
+.module-card-actions .kpm-action .kp-icon {
+    width: 20px;
+    height: 20px;
+    min-width: 20px;
+}
+.module-card-actions .kpm-action:disabled {
+    opacity: .42;
+    cursor: not-allowed;
+}
+.module-card-actions .kpm-action.kpm-danger {
+    background: var(--md-sys-color-error-container);
+    color: var(--md-sys-color-on-error-container);
+    border-color: transparent;
+}
+.module-card-actions .kpm-action:focus-visible {
+    outline: 2px solid var(--md-sys-color-primary);
+    outline-offset: 2px;
+}
+#kpm-page .module-card-actions .kpm-action {
+    flex: 1 1 120px;
+}
+@media (max-width: 360px) {
+    .module-card-actions { gap: 8px; }
+    .module-card-actions .kpm-action { padding-inline: 9px; font-size: 13px; }
+    #kpm-page .module-card-actions .kpm-action { min-width: 0; }
+}
+/* Keep the final KPM card's buttons clear of the floating action button. */
+#kpm-page .page-content {
+    padding-bottom: 112px;
+    scroll-padding-bottom: 112px;
 }
 
 .app-item .tag-wrapper {

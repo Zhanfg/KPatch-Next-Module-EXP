@@ -26,6 +26,8 @@
     <string name="button_cancel">取消</string>
     <string name="button_ok">确定</string>
     <string name="button_load">加载</string>
+    <string name="button_control">控制</string>
+    <string name="button_config">配置</string>
     <string name="button_unload">卸载</string>
     <string name="button_refresh">刷新</string>
     <string name="button_load_mode">加载模式</string>
