@@ -29,7 +29,7 @@ jobs:
           test "$(git hash-object webui/page/patch.js)" = "1dc469accec499f294374600f92f55ba55796064"
           test "$(git hash-object webui/route.js)" = "31179747cc1214aa8671b28b12cc51ee559f9030"
           sh -n module/customize.sh
-          ! grep -q "rm -rf.*\\$MODDIR/webroot" module/customize.sh
+          ! grep -Fq 'Hot update webui' module/customize.sh
           grep -Fq "margin: auto !important" webui/styles.css
           grep -Fq "md-outlined-text-field:focus-within" webui/styles.css
           grep -Fq "versionCode=18" module/module.prop
