@@ -129,60 +129,69 @@ export function linkRedirect(link) {
     }, 100);
 }
 
-document.addEventListener('DOMContentLoaded', async () => {
-    document.querySelectorAll('[unresolved]').forEach(el => el.removeAttribute('unresolved'));
+document.addEventListener('DOMContentLoaded', () => {
     const splash = document.getElementById('splash');
-    if (splash) setTimeout(() => splash.querySelector('.splash-icon').classList.add('show'), 20);
+    try {
+        document.querySelectorAll('[unresolved]').forEach(el => el.removeAttribute('unresolved'));
+        if (splash) setTimeout(() => splash.querySelector('.splash-icon')?.classList.add('show'), 20);
 
-    installImeViewportGuard();
-    setupRoute();
+        // First render and wire all controls before making any device requests.
+        // A stuck Android shell or failed locale fetch must never trap the splash.
+        installImeViewportGuard();
+        setupRoute();
 
-    // language
-    const language = document.getElementById('language');
-    const languageDialog = document.getElementById('language-dialog');
-    language.onclick = () => languageDialog.show();
-    languageDialog.querySelector('.cancel').onclick = () => languageDialog.close();
+        const language = document.getElementById('language');
+        const languageDialog = document.getElementById('language-dialog');
+        language.onclick = () => languageDialog.show();
+        languageDialog.querySelector('.cancel').onclick = () => languageDialog.close();
 
-    // patch/unpatch
-    document.getElementById('embed').onclick = patchModule.embedKPM;
-    document.getElementById('start').onclick = () => {
-        document.querySelector('.trailing-btn').style.display = 'none';
-        patchModule.patch("patch");
+        document.getElementById('embed').onclick = patchModule.embedKPM;
+        document.getElementById('start').onclick = () => {
+            document.querySelector('.trailing-btn').style.display = 'none';
+            patchModule.patch("patch");
+        };
+        document.getElementById('unpatch').onclick = () => {
+            document.querySelector('.trailing-btn').style.display = 'none';
+            patchModule.patch("unpatch");
+        };
+
+        const rebootMenu = document.getElementById('reboot-menu');
+        document.getElementById('reboot-btn').onclick = () => {
+            rebootMenu.open = !rebootMenu.open;
+        };
+        rebootMenu.querySelectorAll('md-menu-item').forEach(item => {
+            item.onclick = () => reboot(item.getAttribute('data-reason'));
+        });
+        document.getElementById('reboot-fab').onclick = () => reboot();
+        getMaxChunkSize();
+
+        // The homepage is usable before asynchronous system probes complete.
+        window.__kpStartup?.ready();
+    } catch (error) {
+        console.error('WebUI early startup failed', error);
+        window.__kpStartup?.fail();
+        return;
     }
-    document.getElementById('unpatch').onclick = () => {
-        document.querySelector('.trailing-btn').style.display = 'none';
-        patchModule.patch("unpatch");
-    }
 
-    // reboot
-    const rebootMenu = document.getElementById('reboot-menu');
-    document.getElementById('reboot-btn').onclick = () => {
-        rebootMenu.open = !rebootMenu.open;
-    }
-    rebootMenu.querySelectorAll('md-menu-item').forEach(item => {
-        item.onclick = () => {
-            reboot(item.getAttribute('data-reason'));
+    // Load translations separately. Native command failures can be arbitrarily
+    // slow on mismatched drivers/patches, so never await them in splash teardown.
+    Promise.resolve().then(() => loadTranslations()).catch(error => {
+        console.error('WebUI translation setup failed', error);
+    }).finally(() => {
+        try {
+            excludeModule.initExcludePage();
+            kpmModule.initKPMPage();
+        } catch (error) {
+            console.error('WebUI page initialization failed', error);
+            window.__kpStartup?.fail();
         }
     });
-    document.getElementById('reboot-fab').onclick = () => reboot();
-
-    getMaxChunkSize();
-
-    try {
-        await loadTranslations();
-        await Promise.all([updateStatus(), initInfo()]);
-
-        excludeModule.initExcludePage();
-        kpmModule.initKPMPage();
-    } catch (error) {
-        console.error('WebUI initialization failed', error);
-    } finally {
-        // Do not leave the application on its splash screen when a device command fails.
-        if (splash) {
-            setTimeout(() => splash.classList.add('exit'), 50);
-            setTimeout(() => splash.remove(), 400);
-        }
-    }
+    Promise.resolve().then(() => updateStatus()).catch(error => {
+        console.error('Failed to query KPatch runtime version', error);
+    });
+    Promise.resolve().then(() => initInfo()).catch(error => {
+        console.error('Failed to query device metadata', error);
+    });
 });
 
 // Overwrite default dialog animation

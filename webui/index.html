@@ -4,6 +4,68 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>KPatch-Next-EXP</title>
+    <!-- Independent boot watchdog: runs even if the bundled module cannot execute. -->
+    <script>
+    (function () {
+        'use strict';
+        var settled = false;
+        var booted = false;
+        function hideSplash() {
+            var splash = document.getElementById('splash');
+            if (splash) {
+                splash.classList.add('exit');
+                setTimeout(function () { splash.remove(); }, 420);
+            }
+        }
+        function showRecovery() {
+            if (document.getElementById('kp-startup-recovery')) return;
+            var host = document.createElement('div');
+            host.id = 'kp-startup-recovery';
+            host.setAttribute('role', 'alert');
+            host.style.cssText = 'position:fixed;top:calc(var(--top-inset, 0px) + 76px);left:16px;right:16px;max-width:500px;margin:auto;z-index:110;padding:16px;border-radius:20px;background:var(--md-sys-color-error-container,#f9dedc);color:var(--md-sys-color-on-error-container,#401c1c);font:14px/1.5 system-ui,sans-serif;box-shadow:0 3px 12px #0002;';
+            var title = document.createElement('div');
+            title.textContent = 'WebUI 启动异常 / Startup incomplete';
+            title.style.cssText = 'font-weight:650;margin-bottom:6px;';
+            var message = document.createElement('div');
+            message.textContent = '界面未能完成初始化。可重试打开；此提示不会修改内核或系统设置。';
+            var retry = document.createElement('button');
+            retry.type = 'button';
+            retry.textContent = '重新打开 / Retry';
+            retry.style.cssText = 'margin-top:12px;border-radius:100px;border:0;padding:10px 16px;background:#825c52;color:white;';
+            retry.onclick = function () { location.reload(); };
+            host.appendChild(title);
+            host.appendChild(message);
+            host.appendChild(retry);
+            document.body.appendChild(host);
+        }
+        window.__kpStartup = {
+            ready: function () {
+                booted = true;
+                if (!settled) {
+                    settled = true;
+                    hideSplash();
+                }
+            },
+            fail: function () {
+                if (!settled) {
+                    settled = true;
+                    hideSplash();
+                }
+                showRecovery();
+            }
+        };
+        window.addEventListener('error', function (event) {
+            if (!booted && event && event.filename && /assets\/.*\.js|index\.js/.test(event.filename)) {
+                window.__kpStartup.fail();
+            }
+        });
+        document.addEventListener('DOMContentLoaded', function () {
+            setTimeout(function () {
+                if (!settled) window.__kpStartup.fail();
+            }, 6000);
+        });
+    }());
+    </script>
     <script src="index.js" type="module"></script>
     <link rel="stylesheet" href="styles.css" type="text/css">
 </head>
