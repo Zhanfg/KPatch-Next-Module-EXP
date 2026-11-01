@@ -54,6 +54,7 @@ jobs:
         make -C core/kernel
         test -s core/kernel/kpimg
         "${TARGET_COMPILE}nm" -a core/kernel/kpimg.elf | grep -F '__kp_symbol_is_su_allow_uid'
+        mkdir -p module/bin
         cp core/kernel/kpimg module/bin/kpimg
         printf 'Patched EXP core SHA: %s\n' "$(git -C core rev-parse HEAD)" > module/ABI-COMPAT-BUILD.txt
         printf 'Kernel, kptools and kpatch: compiled from Zhanfg/KPatch-Next-EXP main\n' >> module/ABI-COMPAT-BUILD.txt
