@@ -32,7 +32,7 @@ jobs:
           ! grep -Fq 'Hot update webui' module/customize.sh
           grep -Fq "margin: auto !important" webui/styles.css
           grep -Fq "md-outlined-text-field:focus-within" webui/styles.css
-          grep -Fq "versionCode=18" module/module.prop
+          grep -Fq "versionCode=19" module/module.prop
           echo "Upstream UI logic unchanged; only UI CSS/SVG changed."
 
       - name: Checkout pinned ABI-fixed EXP core
@@ -120,6 +120,8 @@ jobs:
           node --check webui/page/kpm.js
           node --check webui/page/patch.js
           node --check webui/route.js
+          node --check webui/tests/nav-consistency.test.mjs
+          node webui/tests/nav-consistency.test.mjs
           cd webui
           pnpm install --frozen-lockfile
           pnpm build
@@ -136,14 +138,14 @@ jobs:
           test -s module/bin/kptools
           test -s module/bin/magiskboot
           test -s module/webroot/index.html
-          grep -Fq 'versionCode=18' module/module.prop
-          (cd module && zip -q -r ../KPatch-Next-EXP-CleanUI-Nohello-r1.zip .)
-          unzip -t KPatch-Next-EXP-CleanUI-Nohello-r1.zip | tail -1
-          sha256sum KPatch-Next-EXP-CleanUI-Nohello-r1.zip
+          grep -Fq 'versionCode=19' module/module.prop
+          (cd module && zip -q -r ../KPatch-Next-EXP-CleanUI-Nohello-r1-hotfix1.zip .)
+          unzip -t KPatch-Next-EXP-CleanUI-Nohello-r1-hotfix1.zip | tail -1
+          sha256sum KPatch-Next-EXP-CleanUI-Nohello-r1-hotfix1.zip
 
       - uses: actions/upload-artifact@v4
         with:
-          name: KPatch-Next-EXP-CleanUI-Nohello-r1
-          path: KPatch-Next-EXP-CleanUI-Nohello-r1.zip
+          name: KPatch-Next-EXP-CleanUI-Nohello-r1-hotfix1
+          path: KPatch-Next-EXP-CleanUI-Nohello-r1-hotfix1.zip
           if-no-files-found: error
           retention-days: 30

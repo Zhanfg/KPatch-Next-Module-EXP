@@ -650,13 +650,34 @@ md-menu-item label {
     color: var(--md-sys-color-on-secondary-container);
 }
 
-.bottom-bar-item md-icon {
+/* All four navigation glyphs have the same 32px layout box and a
+ * 24px centered SVG; no per-path positioning or icon-font metrics. */
+.bottom-bar-item > md-icon {
     position: relative;
     z-index: 1;
+    width: 32px;
     height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    min-width: 32px;
+    min-height: 32px;
+    flex: 0 0 32px;
+    display: grid;
+    place-items: center;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    line-height: 1;
+    --md-icon-size: 24px;
+}
+.bottom-bar-item > md-icon > svg {
+    display: block;
+    width: 24px;
+    height: 24px;
+    max-width: 24px;
+    max-height: 24px;
+    margin: auto;
+    flex: none;
+    fill: currentColor;
+    transform: none;
 }
 
 .bottom-bar-item md-icon[slot="selected"] {
