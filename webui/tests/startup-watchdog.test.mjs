@@ -9,9 +9,9 @@ assert.ok(match, 'Independent inline watchdog must exist ahead of module script'
 const compiled = new vm.Script(match[1], {filename:'startup-watchdog.js'});
 const moduleTag = html.indexOf('<script src="index.js" type="module">');
 assert.ok(html.indexOf('<!-- Standalone startup monitor') < moduleTag);
-assert.ok(js.indexOf('window.__kpStartup?.ready()') < js.indexOf('Promise.resolve().then(() => updateStatus())'),
+assert.ok(js.indexOf('window.__kpStartup?.ready()') < js.indexOf('Promise.resolve().then(updateStatus)'),
     'Splash must be released before device native commands start');
-assert.ok(js.indexOf('window.__kpStartup?.ready()') < js.indexOf('Promise.resolve().then(() => initInfo())'),
+assert.ok(js.indexOf('window.__kpStartup?.ready()') < js.indexOf('Promise.resolve().then(initInfo)'),
     'Splash must be released before device metadata probe');
 
 function mock() {
