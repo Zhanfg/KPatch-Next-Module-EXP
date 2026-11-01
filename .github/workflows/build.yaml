@@ -11,7 +11,7 @@ on:
     branches: [main]
     paths:
       - 'webui/**'
-      - 'module/module.prop'
+      - 'module/**'
       - '.github/workflows/build.yaml'
 
 env:
@@ -118,6 +118,16 @@ jobs:
         cache: 'pnpm'
         cache-dependency-path: webui/pnpm-lock.yaml
 
+    - name: Validate staged-only installer
+      shell: bash
+      run: |
+        set -euo pipefail
+        sh -n module/customize.sh
+        test -s module/module.prop
+        grep -Fq 'id=KPatch-Next' module/module.prop
+        grep -Fq 'webroot/index.html' module/customize.sh
+        ! grep -Fq 'Hot update webui' module/customize.sh
+        echo 'Installer staging checks passed.'
     - name: Portable SVG verification
       shell: bash
       run: |
