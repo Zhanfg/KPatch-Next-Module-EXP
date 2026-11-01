@@ -19,11 +19,14 @@ if [ -f "/data/adb/ap/package_config" ] && [ ! -f "/data/adb/kp-next/package_con
     cp "/data/adb/ap/package_config" /data/adb/kp-next/package_config
 fi
 
-# backup module.prop
-cp "$MODPATH/module.prop" "$MODPATH/module.prop.bak"
-
-# Hot update webui, patch scripts and binaries
-rm -rf "$MODDIR/webroot"/* "$MODDIR/bin"/* "$MODDIR/patch"/*
-cp -Lrf "$MODPATH/webroot"/* "$MODDIR/webroot"
-cp -Lrf "$MODPATH/bin"/* "$MODDIR/bin"
-cp -Lrf "$MODPATH/patch"/* "$MODDIR/patch"
+# Installation preflight: validate the *staged* payload before KSU/SukiSU
+# commits it during reboot. Never hot-copy new WebUI / executables into
+# the currently active (old) module: that produces mismatched versions and
+# can make the UI appear updated while module.prop and tools remain old.
+for required in module.prop webroot/index.html bin/kpatch bin/kptools bin/kpimg; do
+    [ -s "$MODPATH/$required" ] || abort "! Missing staged file: $required"
+done
+grep -qx 'id=KPatch-Next' "$MODPATH/module.prop" ||
+    abort "! This is not a KPatch-Next module package"
+ui_print "- Staged KPatch Next EXP: $(sed -n 's/^version=//p' "$MODPATH/module.prop" | head -n 1)"
+ui_print "- Update will activate after reboot; the active WebUI is left intact."
