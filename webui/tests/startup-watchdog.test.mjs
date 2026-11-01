@@ -4,11 +4,11 @@ import { readFileSync } from 'node:fs';
 
 const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const js = readFileSync(new URL('../index.js', import.meta.url), 'utf8');
-const match = html.match(/<!-- Independent boot watchdog[^]*?<script>([\s\S]*?)<\/script>/);
+const match = html.match(/<!-- Standalone startup monitor[^]*?<script>([\s\S]*?)<\/script>/);
 assert.ok(match, 'Independent inline watchdog must exist ahead of module script');
 const compiled = new vm.Script(match[1], {filename:'startup-watchdog.js'});
 const moduleTag = html.indexOf('<script src="index.js" type="module">');
-assert.ok(html.indexOf('<!-- Independent boot watchdog') < moduleTag);
+assert.ok(html.indexOf('<!-- Standalone startup monitor') < moduleTag);
 assert.ok(js.indexOf('window.__kpStartup?.ready()') < js.indexOf('Promise.resolve().then(() => updateStatus())'),
     'Splash must be released before device native commands start');
 assert.ok(js.indexOf('window.__kpStartup?.ready()') < js.indexOf('Promise.resolve().then(() => initInfo())'),
@@ -24,7 +24,7 @@ function mock() {
     const document = {
         body,
         getElementById:id=>id==='splash'?dom.splash:dom[id]||null,
-        createElement:tag=>({tag,style:{},appendChild(child){this.children=(this.children||[]).concat(child)},setAttribute(){}}),
+        createElement:tag=>({tag,style:{},dataset:{},appendChild(child){this.children=(this.children||[]).concat(child)},setAttribute(){},remove(){delete dom[this.id]}}),
         addEventListener:(name,fn)=>events[name]=fn,
     };
     const window = {addEventListener:(name,fn)=>events[name]=fn};
@@ -37,13 +37,13 @@ function mock() {
     assert.equal(env.dom.splash!==null,true);
     env.window.__kpStartup.ready();
     assert.ok(env.splash.classList.items.includes('exit'));
-    const watchdog = env.timerFns.find(x=>x.ms===6000);
+    const watchdog = env.timerFns.find(x=>x.ms===10000);
     watchdog.fn();
     assert.equal(env.document.getElementById('kp-startup-recovery'),null,'successful startup must not show failure UI');
 }
 {
     const env=mock();
-    env.timerFns.find(x=>x.ms===6000).fn();
+    env.timerFns.find(x=>x.ms===10000).fn();
     assert.ok(env.splash.classList.items.includes('exit'));
     assert.ok(env.document.getElementById('kp-startup-recovery'),'stalled JS must show recovery prompt');
 }
@@ -53,4 +53,22 @@ function mock() {
     assert.ok(env.splash.classList.items.includes('exit'));
     assert.ok(env.document.getElementById('kp-startup-recovery'),'bundle load failure must show recovery');
 }
-console.log('Startup watchdog: ready, stuck, and failed-bundle paths PASS');
+{
+    const env = mock();
+    env.timerFns.find(x=>x.ms===10000).fn();
+    assert.ok(env.document.getElementById('kp-startup-recovery'), 'timeout must be reported');
+    // A late successful JS startup must clear a false-positive timeout card.
+    env.window.__kpStartup.ready();
+    assert.equal(env.document.getElementById('kp-startup-recovery'), null, 'late startup clears timeout banner');
+}
+{
+    const env = mock();
+    env.window.__kpStartup.ready();
+    env.window.__kpStartup.warn('ime');
+    assert.equal(env.document.getElementById('kp-startup-recovery')?.dataset.stage,'ime');
+    assert.equal(env.splash.classList.items.includes('exit'), true);
+}
+assert.ok(js.indexOf('window.__kpStartup?.ready()') < js.indexOf("setup('ime'"),
+    'A throwing IME helper must not prevent splash release');
+assert.ok(js.includes("setup('navigation'"), 'navigation setup must be isolated');
+console.log('Startup monitor: early ready, timeout, late-success, warning and bundle-error paths PASS');
