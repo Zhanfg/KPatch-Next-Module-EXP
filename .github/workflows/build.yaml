@@ -74,7 +74,7 @@ jobs:
           mkdir -p module/bin
           cp core/kernel/kpimg module/bin/kpimg
           printf 'KPIMG/source SHA: %s\n' "$(git -C core rev-parse HEAD)" > module/BUILD-PROVENANCE.txt
-          printf '%s\n' 'Only Nohello legacy ABI export is patched in core; no KPM binary bundled.' >> module/BUILD-PROVENANCE.txt
+          printf '%s\n' 'Core includes Nohello ABI and KPM security log redaction and parameter erasure; no KPM binary bundled.' >> module/BUILD-PROVENANCE.txt
 
       - name: Setup Android NDK
         uses: nttld/setup-ndk@v1
