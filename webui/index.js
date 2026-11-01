@@ -139,6 +139,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // A stuck Android shell or failed locale fetch must never trap the splash.
         installImeViewportGuard();
         setupRoute();
+        // The page shell is now interactive. Later feature initialization
+        // failures must not be reclassified as application boot failures.
+        window.__kpStartup?.ready();
 
         const language = document.getElementById('language');
         const languageDialog = document.getElementById('language-dialog');
@@ -165,32 +168,37 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('reboot-fab').onclick = () => reboot();
         getMaxChunkSize();
 
-        // The homepage is usable before asynchronous system probes complete.
-        window.__kpStartup?.ready();
     } catch (error) {
-        console.error('WebUI early startup failed', error);
-        window.__kpStartup?.fail();
+        console.error('WebUI startup control wiring failed', error);
+        // If setupRoute succeeded, ready() is already set: report a
+        // recoverable feature error without covering the home screen.
+        window.__kpStartup?.fail('controls-wiring', error);
         return;
     }
 
     // Load translations separately. Native command failures can be arbitrarily
     // slow on mismatched drivers/patches, so never await them in splash teardown.
     Promise.resolve().then(() => loadTranslations()).catch(error => {
-        console.error('WebUI translation setup failed', error);
+        window.__kpStartup?.issue('translation', error);
     }).finally(() => {
+        // Independent boundaries: a failure in one page must not prevent
+        // initialization of the other page or cover the already usable UI.
         try {
             excludeModule.initExcludePage();
+        } catch (error) {
+            window.__kpStartup?.issue('exclude-page', error);
+        }
+        try {
             kpmModule.initKPMPage();
         } catch (error) {
-            console.error('WebUI page initialization failed', error);
-            window.__kpStartup?.fail();
+            window.__kpStartup?.issue('kpm-page', error);
         }
     });
     Promise.resolve().then(() => updateStatus()).catch(error => {
-        console.error('Failed to query KPatch runtime version', error);
+        window.__kpStartup?.issue('kpatch-status', error);
     });
     Promise.resolve().then(() => initInfo()).catch(error => {
-        console.error('Failed to query device metadata', error);
+        window.__kpStartup?.issue('device-info', error);
     });
 });
 
