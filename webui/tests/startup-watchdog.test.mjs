@@ -20,7 +20,7 @@ function mock() {
     const dom = {};
     const splash = {classList:{items:[],add(x){this.items.push(x)}},remove(){dom.splash=null}};
     dom.splash = splash;
-    const body = {children:[],appendChild(x){this.children.push(x);dom[x.id]=x}};
+    const body = {children:[],appendChild(x){this.children.push(x);dom[x.id]=x;x.remove=()=>{delete dom[x.id];this.children=this.children.filter(el=>el!==x)};}};
     const document = {
         body,
         getElementById:id=>id==='splash'?dom.splash:dom[id]||null,
@@ -53,4 +53,31 @@ function mock() {
     assert.ok(env.splash.classList.items.includes('exit'));
     assert.ok(env.document.getElementById('kp-startup-recovery'),'bundle load failure must show recovery');
 }
-console.log('Startup watchdog: ready, stuck, and failed-bundle paths PASS');
+{
+    // Reproduces the user's screenshot in r5: home screen loaded successfully,
+    // then optional Exclude/KPM setup errors triggered the fatal recovery panel.
+    const env = mock();
+    env.window.__kpStartup.ready();
+    env.window.__kpStartup.fail('exclude-init');
+    env.window.__kpStartup.fail('kpm-init');
+    assert.equal(env.document.getElementById('kp-startup-recovery'),null,
+        'A subpage error after ready() must not obscure the working homepage');
+    assert.equal(env.window.__kpStartupWarnings.length,2);
+    assert.ok(env.window.__kpStartupWarnings.includes('exclude-init'));
+}
+{
+    // If an import failed first but a retry later completed initialization,
+    // the recovery overlay must be removed rather than lingering over the UI.
+    const env=mock();
+    env.window.__kpStartup.fail('bundle-load');
+    assert.ok(env.document.getElementById('kp-startup-recovery'));
+    env.window.__kpStartup.ready();
+    assert.equal(env.document.getElementById('kp-startup-recovery'),null);
+}
+assert.ok(js.includes("initPage('exclude-init'"), 'Exclude must initialize independently');
+assert.ok(js.includes("initPage('kpm-init'"), 'KPM must initialize independently');
+assert.ok(!js.includes("window.__kpStartup?.fail();\n        }\n    });"),
+    'Optional page failures must not raise the global startup failure overlay');
+assert.ok(js.indexOf('window.__kpStartup?.ready()') < js.indexOf('getMaxChunkSize()).catch('),
+    'Native ARG_MAX probe must run after startup is acknowledged');
+console.log('Startup watchdog: ready, stalled, bundle failure and nonfatal page failure PASS');
