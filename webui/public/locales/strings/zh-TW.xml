@@ -26,8 +26,6 @@
     <string name="button_cancel">取消</string>
     <string name="button_ok">確定</string>
     <string name="button_load">載入</string>
-    <string name="button_control">控制</string>
-    <string name="button_config">設定</string>
     <string name="button_unload">取消載入</string>
     <string name="button_refresh">重新整理</string>
     <!-- Labels -->
@@ -84,12 +82,4 @@
     <string name="msg_error_loading_apps">載入應用時發生錯誤：</string>
     <string name="msg_error_rendering_apps">繪製應用時發生錯誤：</string>
     <string name="msg_unknown">未知</string>
-    <string name="label_runtime_control">執行階段控制（立即生效）</string>
-    <string name="label_runtime_parameters">執行階段命令參數</string>
-    <string name="label_boot_options">開機嵌入設定（下次修補生效）</string>
-    <string name="label_boot_parameters">開機嵌入參數</string>
-    <string name="hint_boot_repatch_required">觸發事件與嵌入參數只會儲存在本次修補草稿；必須重新修補開機映像才能生效。</string>
-    <string name="button_execute_now">立即執行</string>
-    <string name="button_save_and_patch">前往修補</string>
-    <string name="button_save_options">儲存設定</string>
 </resources>
