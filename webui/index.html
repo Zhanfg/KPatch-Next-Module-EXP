@@ -10,6 +10,7 @@
         'use strict';
         var settled = false;
         var booted = false;
+        var problems = [];
         function hideSplash() {
             var splash = document.getElementById('splash');
             if (splash) {
@@ -17,17 +18,56 @@
                 setTimeout(function () { splash.remove(); }, 420);
             }
         }
-        function showRecovery() {
+        function makeErrorLabel(phase, error) {
+            var type = error && error.name ? error.name : 'Error';
+            var message = error && error.message ? String(error.message) : '';
+            // Never print URLs, filesystem paths, or likely credentials in UI.
+            message = message.replace(/https?:\\/\\/[^\\s]+/g, '[URL]')
+                             .replace(/\\/(?:data|sdcard|storage)\\/[^\\s]+/g, '[path]')
+                             .replace(/(?:sk-|gh[pousr]_)[A-Za-z0-9_-]{8,}/g, '[REDACTED]');
+            return phase + ' · ' + type + (message ? ': ' + message.slice(0, 160) : '');
+        }
+        function addProblem(phase, error) {
+            console.error('[KP-EXP startup]', phase, error || '');
+            var label = makeErrorLabel(phase, error);
+            if (problems.indexOf(label) >= 0) return;
+            problems.push(label);
+            // Page is already usable: show a small dismissible diagnostic,
+            // not a blocking startup-failure screen.
+            if (document.getElementById('kp-component-warning')) return;
+            var bar = document.createElement('div');
+            bar.id = 'kp-component-warning';
+            bar.setAttribute('role', 'status');
+            bar.style.cssText = 'position:fixed;bottom:calc(var(--bottom-inset,0px) + 92px);left:12px;right:12px;max-width:520px;margin:auto;z-index:45;border-radius:16px;padding:12px 14px;background:var(--md-sys-color-secondary-container,#e3e6f2);color:var(--md-sys-color-on-secondary-container,#242d45);box-shadow:0 3px 12px #0002;font:13px/1.5 system-ui,sans-serif;';
+            var title = document.createElement('div');
+            title.textContent = '部分功能初始化失败 / Partial initialization';
+            title.style.fontWeight = '600';
+            var detail = document.createElement('div');
+            detail.id = 'kp-component-warning-details';
+            detail.textContent = label;
+            detail.style.cssText = 'overflow-wrap:anywhere;margin-top:4px;font-size:12px;';
+            var dismiss = document.createElement('button');
+            dismiss.type = 'button';
+            dismiss.textContent = '关闭 / Dismiss';
+            dismiss.style.cssText = 'margin-top:8px;border-radius:100px;border:0;padding:7px 14px;background:var(--md-sys-color-primary,#506695);color:var(--md-sys-color-on-primary,#fff);';
+            dismiss.onclick = function () { bar.remove(); };
+            bar.appendChild(title);
+            bar.appendChild(detail);
+            bar.appendChild(dismiss);
+            document.body.appendChild(bar);
+        }
+        function showRecovery(phase, error) {
+            if (booted) return addProblem(phase || 'post-startup', error);
             if (document.getElementById('kp-startup-recovery')) return;
             var host = document.createElement('div');
             host.id = 'kp-startup-recovery';
             host.setAttribute('role', 'alert');
             host.style.cssText = 'position:fixed;top:calc(var(--top-inset, 0px) + 76px);left:16px;right:16px;max-width:500px;margin:auto;z-index:110;padding:16px;border-radius:20px;background:var(--md-sys-color-error-container,#f9dedc);color:var(--md-sys-color-on-error-container,#401c1c);font:14px/1.5 system-ui,sans-serif;box-shadow:0 3px 12px #0002;';
             var title = document.createElement('div');
-            title.textContent = 'WebUI 启动异常 / Startup incomplete';
+            title.textContent = 'WebUI 无法启动 / Startup failed';
             title.style.cssText = 'font-weight:650;margin-bottom:6px;';
             var message = document.createElement('div');
-            message.textContent = '界面未能完成初始化。可重试打开；此提示不会修改内核或系统设置。';
+            message.textContent = makeErrorLabel(phase || 'bootstrap', error);
             var retry = document.createElement('button');
             retry.type = 'button';
             retry.textContent = '重新打开 / Retry';
@@ -45,24 +85,30 @@
                     settled = true;
                     hideSplash();
                 }
+                // If a slow script recovered after the timeout, clear the old
+                // blocking error panel; the page is now operational.
+                var recovery = document.getElementById('kp-startup-recovery');
+                if (recovery) recovery.remove();
             },
-            fail: function () {
+            issue: addProblem,
+            fail: function (phase, error) {
+                if (booted) return addProblem(phase || 'after-ready', error);
                 if (!settled) {
                     settled = true;
                     hideSplash();
                 }
-                showRecovery();
+                showRecovery(phase, error);
             }
         };
         window.addEventListener('error', function (event) {
             if (!booted && event && event.filename && /assets\/.*\.js|index\.js/.test(event.filename)) {
-                window.__kpStartup.fail();
+                window.__kpStartup.fail('script-error', event.error || new Error('Module script failed'));
             }
         });
         // Start in the HEAD immediately. DOMContentLoaded waits for module scripts
         // and might never fire if the bundled JS is stalled during import/evaluation.
         setTimeout(function () {
-            if (!settled) window.__kpStartup.fail();
+            if (!settled) window.__kpStartup.fail('startup-timeout', new Error('WebUI module did not acknowledge startup'));
         }, 6000);
     }());
     </script>
