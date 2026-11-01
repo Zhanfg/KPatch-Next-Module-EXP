@@ -173,30 +173,29 @@ document.addEventListener('DOMContentLoaded', () => {
             item.onclick = () => reboot(item.getAttribute('data-reason'));
         });
         document.getElementById('reboot-fab').onclick = () => reboot();
-        getMaxChunkSize();
 
     } catch (error) {
         window.__kpStartup?.issue('controls-wiring', error);
         // Continue loading translations and other independent pages.
     }
 
-    // Load translations separately. Native command failures can be arbitrarily
-    // slow on mismatched drivers/patches, so never await them in splash teardown.
+    // Independent pages must work even when locale loading hangs in a WebView.
+    // Do not let one page's failure disable the other one.
+    try {
+        excludeModule.initExcludePage();
+    } catch (error) {
+        window.__kpStartup?.issue('exclude-page', error);
+    }
+    try {
+        kpmModule.initKPMPage();
+    } catch (error) {
+        window.__kpStartup?.issue('kpm-page', error);
+    }
     Promise.resolve().then(() => loadTranslations()).catch(error => {
         window.__kpStartup?.issue('translation', error);
-    }).finally(() => {
-        // Independent boundaries: a failure in one page must not prevent
-        // initialization of the other page or cover the already usable UI.
-        try {
-            excludeModule.initExcludePage();
-        } catch (error) {
-            window.__kpStartup?.issue('exclude-page', error);
-        }
-        try {
-            kpmModule.initKPMPage();
-        } catch (error) {
-            window.__kpStartup?.issue('kpm-page', error);
-        }
+    });
+    Promise.resolve().then(() => getMaxChunkSize()).catch(error => {
+        window.__kpStartup?.issue('argmax-probe', error);
     });
     Promise.resolve().then(() => updateStatus()).catch(error => {
         window.__kpStartup?.issue('kpatch-status', error);
