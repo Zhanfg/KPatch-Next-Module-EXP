@@ -96,6 +96,9 @@ function updateBottomBar(activeId) {
 }
 
 export function setupRoute() {
+    // The KPM dialog can stage boot options but cannot modify the running image.
+    // Navigating here hands off to the normal boot-image repair workflow.
+    window.addEventListener('kpm:open-patch', navigateToPatch);
     document.getElementById('patch-btn').onclick = navigateToPatch;
     document.getElementById('uninstall').onclick = navigateToUnPatch;
     document.getElementById('not-installed').onclick = navigateToPatch;
