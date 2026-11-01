@@ -102,4 +102,12 @@
     <string name="msg_error_loading_apps">Error loading apps: </string>
     <string name="msg_error_rendering_apps">Error rendering apps: </string>
     <string name="msg_unknown">Unknown</string>
+    <string name="label_runtime_control">Runtime control (takes effect now)</string>
+    <string name="label_runtime_parameters">Runtime command parameters</string>
+    <string name="label_boot_options">Boot embed configuration (next patch)</string>
+    <string name="label_boot_parameters">Boot embedding parameters</string>
+    <string name="hint_boot_repatch_required">Changes to the event or boot parameters require a new boot-image patch; they do not change the running KPM.</string>
+    <string name="button_execute_now">Execute</string>
+    <string name="button_save_and_patch">Continue to repair</string>
+    <string name="button_save_options">Save options</string>
 </resources>

@@ -1,4 +1,5 @@
 import { iconSvg } from '../icons.js';
+import { showKpmControlDialog } from '../kpm-control.js';
 import { exec, spawn, toast } from 'kernelsu-alt';
 import { modDir, persistDir, initInfo, MAX_CHUNK_SIZE, escapeShell, linkRedirect } from '../index.js';
 import { getString } from '../language.js';
@@ -216,17 +217,20 @@ async function refreshKpmList() {
 
 function openControlDialog(module) {
     if (!module.loaded) return;
-    const dialog = document.getElementById('control-dialog');
-    const textField = dialog.querySelector('md-outlined-text-field');
-    dialog.querySelector('.cancel').onclick = () => dialog.close();
-    dialog.querySelector('.confirm').onclick = async () => {
-        await controlModule(module.name, textField.value);
-        await refreshKpmList();
-        initInfo();
-        textField.value = '';
-        dialog.close();
-    };
-    dialog.show();
+    // ctl0 is a live command; embedded boot options are a separate section
+    // and are only staged until the user explicitly repairs the boot image.
+    showKpmControlDialog({
+        moduleName: module.name,
+        mode: 'runtime',
+        embedAvailable: isEmbeddedModule(module),
+        event: module.load_event,
+        embedArgs: module.args || '',
+        onRuntime: async (value) => {
+            await controlModule(module.name, value);
+            await refreshKpmList();
+            initInfo();
+        }
+    });
 }
 
 function openRemoveDialog(module) {
@@ -604,12 +608,6 @@ export function initKPMPage() {
 
     menuBtn.onclick = () => menu.show();
     document.getElementById('refresh-kpm-list-menu').onclick = () => refreshKpmList();
-
-    const controlDialog = document.getElementById('control-dialog');
-    const controlTextField = controlDialog.querySelector('md-outlined-text-field');
-    controlTextField.addEventListener('input', () => {
-        controlDialog.querySelector('.confirm').disabled = !controlTextField.value;
-    });
 
     document.getElementById('load').onclick = () => openModeDialog();
     setupPullToRefresh(document.querySelector('#kpm-page .page-content'), refreshKpmList);

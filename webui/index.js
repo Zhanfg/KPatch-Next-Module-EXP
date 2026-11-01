@@ -1,4 +1,5 @@
 import '@material/web/all.js';
+import { installImeViewportGuard } from './viewport.js';
 import { exec, toast } from 'kernelsu-alt';
 import { setupRoute } from './route.js';
 import { getString, loadTranslations } from './language.js';
@@ -133,6 +134,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const splash = document.getElementById('splash');
     if (splash) setTimeout(() => splash.querySelector('.splash-icon').classList.add('show'), 20);
 
+    installImeViewportGuard();
     setupRoute();
 
     // language
