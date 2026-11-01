@@ -34,7 +34,6 @@ function mock() {
 }
 {
     const env = mock();
-    env.events.DOMContentLoaded();
     assert.equal(env.dom.splash!==null,true);
     env.window.__kpStartup.ready();
     assert.ok(env.splash.classList.items.includes('exit'));
@@ -44,7 +43,6 @@ function mock() {
 }
 {
     const env=mock();
-    env.events.DOMContentLoaded();
     env.timerFns.find(x=>x.ms===6000).fn();
     assert.ok(env.splash.classList.items.includes('exit'));
     assert.ok(env.document.getElementById('kp-startup-recovery'),'stalled JS must show recovery prompt');
