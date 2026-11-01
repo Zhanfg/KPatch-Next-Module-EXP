@@ -38,6 +38,9 @@
             host.appendChild(retry);
             document.body.appendChild(host);
         }
+        // Startup is a one-way state transition: a noncritical subpage error
+        // after ready() must never replace an already-running home screen with
+        // the fatal recovery overlay.
         window.__kpStartup = {
             ready: function () {
                 booted = true;
@@ -45,8 +48,19 @@
                     settled = true;
                     hideSplash();
                 }
+                var staleRecovery = document.getElementById('kp-startup-recovery');
+                if (staleRecovery) staleRecovery.remove();
             },
-            fail: function () {
+            warn: function (stage) {
+                // Store only a bounded diagnostic stage, not shell output, paths,
+                // KPM arguments, stack traces, or sensitive runtime information.
+                var code = String(stage || 'unknown').slice(0, 64).replace(/[^a-zA-Z0-9_.-]/g, '_');
+                window.__kpStartupWarnings = window.__kpStartupWarnings || [];
+                if (window.__kpStartupWarnings.length < 12) window.__kpStartupWarnings.push(code);
+            },
+            fail: function (stage) {
+                this.warn(stage || 'pre-ready');
+                if (booted) return; // The page works; a subpage error is not a fatal startup error.
                 if (!settled) {
                     settled = true;
                     hideSplash();
