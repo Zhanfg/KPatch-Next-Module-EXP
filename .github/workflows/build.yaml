@@ -130,6 +130,7 @@ jobs:
         node --check webui/viewport.js
         node webui/tests/check-icons.mjs
         node webui/tests/control-ime.test.mjs
+        node webui/tests/startup-watchdog.test.mjs
 
     - name: build webroot
       run: |
