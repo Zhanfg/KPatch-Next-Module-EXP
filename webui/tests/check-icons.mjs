@@ -32,4 +32,8 @@ for (const name of ['tune','power','delete','close']) {
 assert.ok(kpm.includes("isEmbeddedModule(module) ? 'power' : 'delete'"), 'Manual exit must use power SVG, not delete');
 assert.ok(kpm.includes("${iconSvg('tune')}"),'KPM control icon SVG missing');
 assert.ok(patch.includes("${iconSvg('tune')}"),'Patch control icon SVG missing');
-console.log('Portable SVG icons: source checks passed');
+assert.match(kpm,/class="control kpm-action"/,'KPM action button must keep visible label');
+assert.match(kpm,/class="unload kpm-action"/,'KPM exit button must keep visible label');
+assert.match(patch,/class="control kpm-action"/,'Patch config button must keep visible label');
+assert.match(patch,/class="unload kpm-action kpm-danger"/,'Patch remove button must keep visible label');
+console.log('Portable SVG icons and labeled actions: source checks passed');
