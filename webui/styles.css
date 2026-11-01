@@ -795,3 +795,38 @@ md-dialog .checkbox-item {
 .kp-icon[slot="trailing-icon"] {
     cursor: pointer;
 }
+
+/* Android WebView adjustResize / visualViewport IME behavior.
+ * The bar is shifted below the IME rather than reflowed above it.
+ * Only Material dialogs remain visible and the active text field can be panned.
+ */
+html.kp-ime-visible .bottom-bar {
+    transform: translate3d(0, var(--kp-ime-occlusion, 0px), 0) !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    transition: none !important;
+}
+#control-dialog .kpm-control-section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+#control-dialog .kpm-control-hint {
+    font-size: 12px;
+    line-height: 1.45;
+    color: var(--md-sys-color-on-surface-variant);
+}
+#control-dialog [slot="content"] {
+    overflow-y: auto;
+    max-height: min(58dvh, 490px);
+}
+#control-dialog [slot="actions"] {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 6px;
+}
+#control-dialog .kpm-control-section[hidden],
+#control-dialog [hidden] {
+    display: none !important;
+}
