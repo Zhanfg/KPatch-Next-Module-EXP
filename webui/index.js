@@ -142,7 +142,14 @@ document.addEventListener('DOMContentLoaded', () => {
         // The page shell is now interactive. Later feature initialization
         // failures must not be reclassified as application boot failures.
         window.__kpStartup?.ready();
+    } catch (error) {
+        console.error('WebUI shell startup failed', error);
+        window.__kpStartup?.fail('shell-startup', error);
+        return;
+    }
 
+    // Control wiring is independent from route rendering.
+    try {
         const language = document.getElementById('language');
         const languageDialog = document.getElementById('language-dialog');
         language.onclick = () => languageDialog.show();
@@ -169,11 +176,8 @@ document.addEventListener('DOMContentLoaded', () => {
         getMaxChunkSize();
 
     } catch (error) {
-        console.error('WebUI startup control wiring failed', error);
-        // If setupRoute succeeded, ready() is already set: report a
-        // recoverable feature error without covering the home screen.
-        window.__kpStartup?.fail('controls-wiring', error);
-        return;
+        window.__kpStartup?.issue('controls-wiring', error);
+        // Continue loading translations and other independent pages.
     }
 
     // Load translations separately. Native command failures can be arbitrarily
