@@ -34,20 +34,6 @@ jobs:
       run: |
         grep -v '^#' version.properties | sed -e 's/ *= */=/g' -e 's/"//g' >> $GITHUB_ENV
 
-    - name: download kpatch-next binaries
-      run: |
-        mkdir -p module/bin
-        TAG="${{ env['kpatch-next'] }}"
-        ARGS=("-R" "741afb7/KPatch-Next-EXP" "-p" "kpatch-android" "-p" "kptools-android" "-p" "kpimg-linux" "-D" "module/bin")
-        if [ "$TAG" != "latest" ]; then
-          gh release download "$TAG" "${ARGS[@]}"
-        else
-          gh release download "${ARGS[@]}"
-        fi
-        mv module/bin/kpatch-android module/bin/kpatch
-        mv module/bin/kptools-android module/bin/kptools
-        mv module/bin/kpimg-linux module/bin/kpimg
-
     - name: Checkout ABI-fixed EXP core
       uses: actions/checkout@v4
       with:
@@ -70,8 +56,42 @@ jobs:
         "${TARGET_COMPILE}nm" -a core/kernel/kpimg.elf | grep -F '__kp_symbol_is_su_allow_uid'
         cp core/kernel/kpimg module/bin/kpimg
         printf 'Patched EXP core SHA: %s\n' "$(git -C core rev-parse HEAD)" > module/ABI-COMPAT-BUILD.txt
-        printf 'Android utilities: EXP release 0.13.14; kernel: compiled from Zhanfg/KPatch-Next-EXP main\n' >> module/ABI-COMPAT-BUILD.txt
+        printf 'Kernel, kptools and kpatch: compiled from Zhanfg/KPatch-Next-EXP main\n' >> module/ABI-COMPAT-BUILD.txt
         sha256sum module/bin/kpimg
+
+    # Build the matching Android CLIs from the *same* core checkout as kpimg.
+    # 0.13.14 is the latest EXP release, but its prebuilt kptools predates
+    # main-branch symbol-resolution and patcher fixes.
+    - name: Setup Android NDK
+      uses: nttld/setup-ndk@v1
+      id: android-ndk
+      with:
+        ndk-version: r26b
+        add-to-path: true
+
+    - name: Build matching Android kptools and kpatch from EXP source
+      shell: bash
+      env:
+        NDK_ROOT: ${{ steps.android-ndk.outputs.ndk-path }}
+      run: |
+        set -euo pipefail
+        export TARGET_COMPILE=placeholder
+        make -C core/kernel hdr
+        for tool in tools user; do
+          cmake -S "core/$tool" -B "core/$tool/build/android" \
+            -DCMAKE_TOOLCHAIN_FILE="$NDK_ROOT/build/cmake/android.toolchain.cmake" \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DANDROID_PLATFORM=android-33 \
+            -DANDROID_ABI=arm64-v8a
+          cmake --build "core/$tool/build/android" -j 2
+        done
+        install -m 0755 core/tools/build/android/kptools module/bin/kptools
+        install -m 0755 core/user/build/android/kpatch module/bin/kpatch
+        file module/bin/kptools module/bin/kpatch
+        "$NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf" -h module/bin/kptools | grep -E 'Class:|Machine:'
+        "$NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf" -h module/bin/kpatch | grep -E 'Class:|Machine:'
+        echo 'Android CLI source: Zhanfg/KPatch-Next-EXP main, same revision as kpimg' >> module/ABI-COMPAT-BUILD.txt
+        sha256sum module/bin/kptools module/bin/kpatch module/bin/kpimg
 
     - name: Download magiskboot binary
       run: |
