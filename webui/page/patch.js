@@ -1,4 +1,5 @@
 import { iconSvg } from '../icons.js';
+import { showKpmControlDialog, getQueuedBootOptions, clearQueuedBootOptions } from '../kpm-control.js';
 import { exec, spawn, toast } from 'kernelsu-alt';
 import { modDir, escapeShell } from '../index.js';
 import { handleFileUpload, uploadFile } from './kpm.js';
@@ -137,8 +138,8 @@ async function parseBootimg() {
                         existedExtras.push({
                             type: 'KPM',
                             name: extra.name,
-                            event: extra.event || 'pre-kernel-init',
-                            args: extra.args || '',
+                            event: getQueuedBootOptions(extra.name)?.event || extra.event || 'pre-kernel-init',
+                            args: getQueuedBootOptions(extra.name)?.args ?? extra.args ?? '',
                             version: extra.version,
                             license: extra.license,
                             author: extra.author,
@@ -255,28 +256,17 @@ function renderKpmList() {
 }
 
 function openOptionDialog(item) {
-    const dialog = document.getElementById('kpm-option-dialog');
-    const eventSelect = document.getElementById('kpm-event-select');
-    const argsInput = document.getElementById('kpm-args-input');
-
-    eventSelect.value = item.event || 'pre-kernel-init';
-    argsInput.value = item.args || '';
-
-    const confirmBtn = dialog.querySelector('.confirm');
-    const newConfirm = confirmBtn.cloneNode(true);
-    confirmBtn.parentNode.replaceChild(newConfirm, confirmBtn);
-
-    newConfirm.onclick = () => {
-        item.event = eventSelect.value;
-        item.args = argsInput.value;
-        dialog.close();
-        renderKpmList();
-    };
-
-    const cancelBtn = dialog.querySelector('.cancel');
-    cancelBtn.onclick = () => dialog.close();
-
-    dialog.show();
+    showKpmControlDialog({
+        moduleName: item.name,
+        mode: 'embed',
+        event: item.event,
+        embedArgs: item.args || '',
+        onEmbed: (event, args) => {
+            item.event = event;
+            item.args = args;
+            renderKpmList();
+        }
+    });
 }
 
 async function embedKPM() {
@@ -394,6 +384,8 @@ function patch(type) {
             bootDev = '';
             kimgInfo = { banner: '', patched: false };
             newExtras = [];
+            // Only clear staged boot options after a successful patch.
+            clearQueuedBootOptions();
         }
         exec(`rm -rf ${modDir}/tmp`);
     });
