@@ -263,7 +263,7 @@ function renderKpmList() {
     const container = document.getElementById('kpm-list');
     container.innerHTML = '';
 
-    allKpms.forEach(module => {
+    allKpms.forEach((module, index) => {
         const item = document.createElement('div');
         item.className = 'card module-card';
         const modeTag = getLoadModeTag(module);
