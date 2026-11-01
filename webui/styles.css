@@ -700,7 +700,8 @@ md-dialog .checkbox-item {
 }
 
 .text-field-dialog {
-    margin-top: 20vh;
+    /* Material Web's native dialog owns vertical centering. */
+    margin: auto !important;
 }
 
 #language-form {
@@ -728,4 +729,29 @@ md-dialog .checkbox-item {
 
 .fab-padding {
     padding-bottom: 72px;
+}
+
+/* Android IME: keep the bottom navigation from appearing above the keyboard.
+ * Hide it while a text input has focus; do not resize/reparent/move it.
+ * Native Material dialogs remain free to reposition into the visual viewport.
+ * :focus-within crosses the Material text-field host shadow boundary.
+ */
+@supports selector(body:has(*)) {
+    body:has(md-outlined-text-field:focus-within, md-filled-text-field:focus-within, input:focus, textarea:focus) .bottom-bar {
+        opacity: 0;
+        pointer-events: none;
+        transition: none;
+    }
+}
+
+/* Card and FAB clearance on narrow screens; no native control replacement. */
+#kpm-page .page-content {
+    padding-bottom: 108px;
+    scroll-padding-bottom: 108px;
+}
+@media (max-width: 360px) {
+    .module-card-actions {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
 }
