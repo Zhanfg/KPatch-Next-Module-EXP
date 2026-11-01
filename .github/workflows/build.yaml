@@ -32,16 +32,26 @@ jobs:
           ! grep -Fq 'Hot update webui' module/customize.sh
           grep -Fq "margin: auto !important" webui/styles.css
           grep -Fq "md-outlined-text-field:focus-within" webui/styles.css
-          grep -Fq "versionCode=19" module/module.prop
+          grep -Fq "versionCode=20" module/module.prop
           echo "Upstream UI logic unchanged; only UI CSS/SVG changed."
 
       - name: Checkout pinned ABI-fixed EXP core
         uses: actions/checkout@v4
         with:
           repository: Zhanfg/KPatch-Next-EXP
-          ref: eacde245b912be94bde243dcc87fa3a0f922c038
+          ref: 8193f610d0105569437e17cc991459365dfa463a
           path: core
           submodules: recursive
+
+      - name: Verify pinned EXP security patch and Nohello ABI
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C core rev-parse HEAD)" = "8193f610d0105569437e17cc991459365dfa463a"
+          python3 core/checks/check_kpm_data_hygiene.py
+          cc -std=c11 -O2 -Wall -Wextra -Werror \
+            -o /tmp/test_kpm_secure_wipe core/checks/test_kpm_secure_wipe.c
+          /tmp/test_kpm_secure_wipe
 
       - name: Install aarch64 bare-metal compiler
         shell: bash
@@ -138,14 +148,14 @@ jobs:
           test -s module/bin/kptools
           test -s module/bin/magiskboot
           test -s module/webroot/index.html
-          grep -Fq 'versionCode=19' module/module.prop
-          (cd module && zip -q -r ../KPatch-Next-EXP-CleanUI-Nohello-r1-hotfix1.zip .)
-          unzip -t KPatch-Next-EXP-CleanUI-Nohello-r1-hotfix1.zip | tail -1
-          sha256sum KPatch-Next-EXP-CleanUI-Nohello-r1-hotfix1.zip
+          grep -Fq 'versionCode=20' module/module.prop
+          (cd module && zip -q -r ../KPatch-Next-EXP-CleanUI-Nohello-r1-hotfix2-security.zip .)
+          unzip -t KPatch-Next-EXP-CleanUI-Nohello-r1-hotfix2-security.zip | tail -1
+          sha256sum KPatch-Next-EXP-CleanUI-Nohello-r1-hotfix2-security.zip
 
       - uses: actions/upload-artifact@v4
         with:
-          name: KPatch-Next-EXP-CleanUI-Nohello-r1-hotfix1
-          path: KPatch-Next-EXP-CleanUI-Nohello-r1-hotfix1.zip
+          name: KPatch-Next-EXP-CleanUI-Nohello-r1-hotfix2-security
+          path: KPatch-Next-EXP-CleanUI-Nohello-r1-hotfix2-security.zip
           if-no-files-found: error
           retention-days: 30
