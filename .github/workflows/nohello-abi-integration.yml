@@ -1,0 +1,110 @@
+name: Nohello ABI integration module (test build)
+
+on:
+  push:
+    branches:
+      - fix/nohello-legacy-kpm-abi
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    name: Compile patched KPIMG and package EXP module
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out module
+        uses: actions/checkout@v4
+
+      - name: Check out matching patched EXP core
+        uses: actions/checkout@v4
+        with:
+          repository: Zhanfg/KPatch-Next-EXP
+          ref: fix/nohello-legacy-kpm-abi
+          path: core
+          submodules: recursive
+
+      - name: Build patched core
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fL --retry 3 -o /tmp/arm-toolchain.tar.xz \
+            https://armkeil.blob.core.windows.net/developer/Files/downloads/gnu/12.2.rel1/binrel/arm-gnu-toolchain-12.2.rel1-x86_64-aarch64-none-elf.tar.xz
+          mkdir -p /tmp/kp-toolchain
+          tar -xJf /tmp/arm-toolchain.tar.xz -C /tmp/kp-toolchain --strip-components=1
+          export TARGET_COMPILE="/tmp/kp-toolchain/bin/aarch64-none-elf-"
+          make -C core/kernel
+          test -s core/kernel/kpimg
+          "$TARGET_COMPILE"nm -a core/kernel/kpimg.elf | grep -F '__kp_symbol_is_su_allow_uid'
+          echo "CORE_SHA=$(git -C core rev-parse HEAD)" >> "$GITHUB_ENV"
+
+      - name: Download original EXP 0.13.14 Android utilities
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p module/bin
+          gh release download 0.13.14 -R 741afb7/KPatch-Next-EXP \
+            -p kpatch-android -p kptools-android -D module/bin
+          mv module/bin/kpatch-android module/bin/kpatch
+          mv module/bin/kptools-android module/bin/kptools
+          cp core/kernel/kpimg module/bin/kpimg
+          chmod 0755 module/bin/kpatch module/bin/kptools
+
+      - name: Download Magiskboot v30.6
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release download v30.6 -R topjohnwu/Magisk -p 'Magisk*.apk' -O /tmp/magisk.apk
+          unzip -p /tmp/magisk.apk 'lib/arm64-v8a/libmagiskboot.so' > module/bin/magiskboot
+          test -s module/bin/magiskboot
+          chmod 0755 module/bin/magiskboot
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: '10.28.2'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.19.x'
+          cache: pnpm
+          cache-dependency-path: webui/pnpm-lock.yaml
+
+      - name: Build WebUI
+        run: |
+          set -euo pipefail
+          cd webui
+          pnpm install --frozen-lockfile
+          pnpm build
+
+      - name: Validate module and archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s module/module.prop
+          test -s module/bin/kpatch
+          test -s module/bin/kptools
+          test -s module/bin/kpimg
+          test -s module/bin/magiskboot
+          test -s module/webroot/index.html
+          printf '%s\n' "Core revision: $CORE_SHA" > module/ABI-COMPAT-BUILD.txt
+          printf '%s\n' 'Patched source: Zhanfg/KPatch-Next-EXP fix/nohello-legacy-kpm-abi' >> module/ABI-COMPAT-BUILD.txt
+          printf '%s\n' 'Android CLI: EXP release 0.13.14; Magiskboot: v30.6' >> module/ABI-COMPAT-BUILD.txt
+          printf '%s\n' 'TEST BUILD - KPM runtime and boot image NOT validated on device.' >> module/ABI-COMPAT-BUILD.txt
+          (cd module && zip -q -r ../KPatch-Next-EXP-Nohello-ABI-test.zip .)
+          unzip -t KPatch-Next-EXP-Nohello-ABI-test.zip | tail -1
+          sha256sum KPatch-Next-EXP-Nohello-ABI-test.zip
+
+      - name: Upload test module ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: KPatch-Next-EXP-Nohello-ABI-test-${{ github.run_number }}
+          path: KPatch-Next-EXP-Nohello-ABI-test.zip
+          if-no-files-found: error
+          retention-days: 30
