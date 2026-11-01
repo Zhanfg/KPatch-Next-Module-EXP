@@ -223,12 +223,12 @@ function renderKpmList() {
             </div>
             <md-divider></md-divider>
             <div class="module-card-actions">
-                <md-filled-tonal-icon-button class="control">
+                <button type="button" class="control kpm-action">
                     ${iconSvg('tune')}
-                </md-filled-tonal-icon-button>
-                <md-filled-tonal-icon-button class="unload">
+                <span>${getString('button_config')}</span></button>
+                <button type="button" class="unload kpm-action kpm-danger">
                     ${iconSvg('delete')}
-                </md-filled-tonal-icon-button>
+                <span>${getString('button_remove')}</span></button>
             </div>
         `;
 
