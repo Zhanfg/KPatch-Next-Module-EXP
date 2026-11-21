@@ -41,7 +41,7 @@
     <string name="label_system_default">System Default</string>
     <string name="label_trigger_event">Trigger Event</string>
     <string name="label_install_mode">INSTALL MODE</string>
-    <string name="label_enable_installed_module">Enable installed module</string>
+    <string name="label_enable_installed_module">Load on next boot</string>
     <string name="label_flash_to_device">Flash to Device</string>
     <!-- Status -->
     <string name="status_not_installed">Not installed</string>
